@@ -1,0 +1,31 @@
+# Core dependencies for data processing
+pandas>=1.5.0
+numpy>=1.21.0
+openpyxl>=3.0.9        # Excel file support
+xlsxwriter>=3.0.0      # Excel writing
+chardet>=5.0.0         # Character encoding detection
+
+# Date/time handling
+python-dateutil>=2.8.0
+pytz>=2022.1
+
+# GUI framework (future)
+streamlit>=1.15.0      # Web-based dashboard
+plotly>=5.11.0         # Data visualization
+
+# Development dependencies
+pytest>=7.0.0
+pytest-cov>=4.0.0
+black>=22.0.0          # Code formatting
+flake8>=5.0.0          # Linting
+mypy>=0.991            # Type checking
+
+# Utilities
+configparser           # Built-in with Python
+pathlib               # Built-in with Python
+sqlite3               # Built-in with Python
+logging               # Built-in with Python
+
+# Optional: Advanced features
+# requests>=2.28.0     # HTTP requests (if needed)
+# schedule>=1.2.0      # Job scheduling (if needed)
