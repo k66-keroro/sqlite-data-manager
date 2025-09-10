@@ -70,14 +70,23 @@ sqlite-data-manager/
 
 ---
 
-## 基本操作
-
-### 1. システムの実行
-
+	## 基本操作
+	
+	### 1. システムの実行
+	
 #### 基本実行（全工程）
 ```bash
-python main.py
+# 1. 開発環境初期化（初回のみ）
+python main.py init_dev
+
+# 2. データファイル読み込み＋SQLite格納  
+python main.py load
+
+# 3. データ分析＋レポート生成
+python main.py analyze
 ```
+
+**注意**: `python main.py`だけでは実行されません。上記3段階の手順が必要です。
 
 #### モジュール別実行
 ```bash
@@ -100,11 +109,35 @@ tail -f output/process.log
 ```
 
 #### データベースの確認
+
+##### SQLiteコマンドラインでの確認
 ```bash
-# SQLite コマンドラインで確認
+# SQLiteデータベースに接続
 sqlite3 output/master.db
+
+# テーブル一覧表示
 .tables
-.schema
+
+# テーブル構造確認
+.schema file_structures
+
+# データ件数確認  
+SELECT COUNT(*) FROM file_structures;
+
+# 最初の10件表示
+SELECT * FROM file_structures LIMIT 10;
+
+# 終了
+.quit
+```
+
+##### Pythonスクリプトでの確認
+```bash
+# t001_analyzer.pyで詳細分析
+python t001_analyzer.py
+
+# t002_analyzer.pyで問題特定
+python t002_analyzer.py
 ```
 
 #### 処理結果レポートの確認
@@ -138,6 +171,32 @@ MEMORY_LIMIT = 4096
 ---
 
 ## データ型修正の手順
+
+### T001分析ツール（詳細分析）
+
+```bash
+# compare_report.csvの詳細分析
+python t001_analyzer.py
+```
+
+**出力結果**:
+- 型不一致の詳細パターン分析
+- SAPデータ特殊ルール（後ろマイナス、0パディング）の検出
+- 重複フィールドの特定
+- 一致率の算出
+
+### T002分析ツール（問題特定）
+
+```bash  
+# 4つの主要問題パターンの特定
+python t002_analyzer.py
+```
+
+**特定される問題**:
+1. **未登録型**: Inferred_Type_未登録のファイル
+2. **DATETIME問題**: TEXT判定されるべきDATETIME型
+3. **INTEGER問題**: TEXT変更が必要なINTEGER型  
+4. **保管場所コード**: 数値だがTEXTが適切なフィールド
 
 ### 1. 型比較結果の確認
 
