@@ -103,6 +103,17 @@ python mapper.py
 ### 2. 実行結果の確認
 
 #### ログファイルの確認
+
+**Windows環境:**
+```powershell
+# 最新のログを表示
+Get-Content output/process.log -Tail 20
+
+# リアルタイム監視（PowerShell 3.0以降）
+Get-Content output/process.log -Wait -Tail 10
+```
+
+**Linux/Mac環境:**
 ```bash
 # 最新のログを表示
 tail -f output/process.log
@@ -141,10 +152,27 @@ python t002_analyzer.py
 ```
 
 #### 処理結果レポートの確認
-```bash
+
+**Windows環境:**
+```powershell
 # CSVファイルをExcelで開く
-start output/compare_report.csv  # Windows
+start output/compare_report.csv
+
+# テキストエディタで開く
+notepad output/compare_report.csv
+
+# PowerShellで内容確認
+Import-Csv output/compare_report.csv | Select-Object -First 10
+```
+
+**Linux/Mac環境:**
+```bash
+# CSVファイルを開く
 open output/compare_report.csv   # Mac
+xdg-open output/compare_report.csv  # Linux
+
+# テキストで確認
+head -10 output/compare_report.csv
 ```
 
 ### 3. 設定の変更
@@ -316,6 +344,24 @@ python analyzer.py --strict-numeric True
 ### 緊急時の対応
 
 #### データベースのバックアップ
+
+**Windows環境:**
+```powershell
+# 手動バックアップ
+$date = Get-Date -Format "yyyyMMdd_HHmmss"
+Copy-Item "output/master.db" "output/master_backup_$date.db"
+
+# Pythonスクリプトでバックアップ
+python -c "
+import shutil
+import datetime
+backup_name = f'output/master_backup_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.db'
+shutil.copy('output/master.db', backup_name)
+print(f'バックアップ作成: {backup_name}')
+"
+```
+
+**Linux/Mac環境:**
 ```bash
 # 毎日の自動バックアップ
 cp output/master.db output/master_$(date +%Y%m%d).db
@@ -331,6 +377,17 @@ print(f'バックアップ作成: {backup_name}')
 ```
 
 #### システムの初期化
+
+**Windows環境:**
+```powershell
+# 出力ディレクトリをクリア
+Remove-Item -Path "output/*" -Recurse -Force
+
+# 初期化スクリプト実行
+python init_dev.py
+```
+
+**Linux/Mac環境:**
 ```bash
 # 出力ディレクトリをクリア
 rm -rf output/*
