@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 T002 Analyzer: データ型修正サポートツール
 4つの問題パターンを詳細分析し、修正ルールを特定する
@@ -8,6 +9,11 @@ import pandas as pd
 import os
 import sys
 from collections import defaultdict, Counter
+
+# Windows コンソール文字化け対策
+if sys.platform == "win32":
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 def analyze_compare_report(csv_path):
     """compare_report.csvの詳細分析"""
@@ -51,7 +57,13 @@ def analyze_compare_report(csv_path):
     
     print(f"   DATETIME→TEXT: {len(datetime_to_text)} 件")
     print(f"   DATETIME→DATETIME: {len(datetime_to_datetime)} 件")
-    print(f"   正解率: {len(datetime_to_datetime)/(len(datetime_to_text)+len(datetime_to_datetime))*100:.1f}%")
+    
+    total_datetime = len(datetime_to_text) + len(datetime_to_datetime)
+    if total_datetime > 0:
+        accuracy = len(datetime_to_datetime) / total_datetime * 100
+        print(f"   正解率: {accuracy:.1f}%")
+    else:
+        print("   正解率: N/A (DATETIMEデータが存在しません)")
     
     if len(datetime_to_text) > 0:
         print("   失敗ファイル (上位5件):")
