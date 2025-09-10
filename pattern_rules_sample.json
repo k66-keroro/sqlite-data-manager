@@ -1,0 +1,149 @@
+{
+  "metadata": {
+    "version": "1.0.0",
+    "created_at": "2024-09-10T00:00:00",
+    "description": "SQLite Data Manager - データ型修正ルール定義",
+    "total_rules": 4,
+    "target_problems": [
+      "Inferred_Type未登録問題",
+      "DATETIME→TEXT型不一致",
+      "INTEGER→TEXT型不一致（SAP特殊形式）",
+      "保管場所コード特殊処理"
+    ]
+  },
+  "global_settings": {
+    "encoding_priority": ["cp932", "utf-8", "utf-16"],
+    "sap_special_patterns": {
+      "trailing_minus": true,
+      "zero_padding": true,
+      "date_formats": ["YYYYMMDD", "YYYY/MM/DD", "YYYY-MM-DD"]
+    },
+    "force_text_keywords": [
+      "コード", "CD", "CODE", "品目コード", "保管場所", "プラント"
+    ]
+  },
+  "rules": {
+    "pattern_1_unregistered": {
+      "pattern_type": "unregistered_type",
+      "priority": 1,
+      "description": "Inferred_Type未登録ファイルの個別対応",
+      "affected_files": [
+        "払出明細（大阪）_ZPR01201.txt",
+        "払出明細（滋賀）_ZPR01201.txt", 
+        "zs65.txt",
+        "zs65_sss.txt"
+      ],
+      "actions": [
+        {
+          "type": "file_investigation",
+          "target": "払出明細*_ZPR01201.txt",
+          "suggested_encoding": "cp932",
+          "suggested_delimiter": "\\t",
+          "fallback_type": "TEXT"
+        },
+        {
+          "type": "file_investigation", 
+          "target": "zs65*.txt",
+          "suggested_encoding": "cp932",
+          "suggested_delimiter": "\\t",
+          "fallback_type": "TEXT"
+        }
+      ]
+    },
+    "pattern_2_datetime_text": {
+      "pattern_type": "datetime_to_text",
+      "priority": 2,
+      "description": "DATETIME推論だが実際はTEXTのフィールド修正",
+      "condition": {
+        "inferred_type": "DATETIME",
+        "actual_type": "TEXT"
+      },
+      "field_name_patterns": [
+        "*日付*", "*DATE*", "*TIME*", "*年月日*"
+      ],
+      "actions": [
+        {
+          "type": "force_type_change",
+          "from": "DATETIME",
+          "to": "TEXT",
+          "reason": "SAP日付形式の多様性により文字列として扱う"
+        }
+      ]
+    },
+    "pattern_3_integer_text": {
+      "pattern_type": "integer_to_text", 
+      "priority": 3,
+      "description": "INTEGER推論だが実際はTEXTのフィールド修正（SAP特殊形式対応）",
+      "condition": {
+        "inferred_type": "INTEGER",
+        "actual_type": "TEXT"
+      },
+      "field_name_patterns": [
+        "*金額*", "*単価*", "*原価*", "*数量*", "*コスト*"
+      ],
+      "sap_special_cases": [
+        {
+          "pattern": "trailing_minus",
+          "description": "末尾マイナス記号（例: 123-）",
+          "action": "keep_as_text"
+        },
+        {
+          "pattern": "zero_padding",
+          "description": "ゼロパディング（例: 000123）", 
+          "action": "keep_as_text"
+        }
+      ],
+      "actions": [
+        {
+          "type": "force_type_change",
+          "from": "INTEGER", 
+          "to": "TEXT",
+          "reason": "SAP特殊数値形式のため文字列として扱う"
+        }
+      ]
+    },
+    "pattern_4_storage_location": {
+      "pattern_type": "storage_location_code",
+      "priority": 4, 
+      "description": "保管場所コードの特殊処理（数値でもTEXT型）",
+      "condition": {
+        "field_name_contains": ["保管場所", "storage", "location"],
+        "inferred_type": "INTEGER"
+      },
+      "business_rule": {
+        "reason": "保管場所コードは先頭ゼロの可能性があるため文字列として扱う",
+        "examples": ["0001", "0010", "A001"]
+      },
+      "actions": [
+        {
+          "type": "force_type_change",
+          "from": "INTEGER",
+          "to": "TEXT", 
+          "reason": "保管場所コードは先頭ゼロ保持のため文字列型必須"
+        }
+      ]
+    }
+  },
+  "validation_rules": {
+    "required_fields": ["File", "Field", "Inferred_Type", "Actual_Type"],
+    "allowed_types": ["TEXT", "INTEGER", "REAL", "DATETIME"],
+    "consistency_checks": [
+      {
+        "name": "duplicate_field_check",
+        "description": "同一フィールド名の型整合性確認"
+      },
+      {
+        "name": "sap_pattern_validation", 
+        "description": "SAP特殊パターンの妥当性確認"
+      }
+    ]
+  },
+  "reporting": {
+    "generate_before_after_report": true,
+    "include_sample_data": true,
+    "success_metrics": {
+      "target_match_rate": 95.0,
+      "current_match_rate": 89.5
+    }
+  }
+}

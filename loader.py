@@ -117,6 +117,62 @@ def get_inferred_info(conn: sqlite3.Connection, file_name: str) -> Dict[str, str
     except Exception:
         return {}
 
+
+def convert_dataframe_types(df: pd.DataFrame, inferred_schema: Dict[str, str]) -> pd.DataFrame:
+    """DataFrameの列を推定型に応じて変換"""
+    df_converted = df.copy()
+    
+    for col_name, inferred_type in inferred_schema.items():
+        if col_name not in df_converted.columns:
+            continue
+            
+        try:
+            if inferred_type == "INTEGER":
+                # 整数変換（エラー値はNoneに）
+                df_converted[col_name] = pd.to_numeric(df_converted[col_name], errors='coerce').astype('Int64')
+            elif inferred_type == "REAL":
+                # 実数変換（エラー値はNoneに）
+                df_converted[col_name] = pd.to_numeric(df_converted[col_name], errors='coerce').astype('float64')
+            elif inferred_type == "DATETIME":
+                # 日付変換 → 文字列形式で保存（SQLiteのTimestamp問題回避）
+                try:
+                    dt_series = pd.to_datetime(df_converted[col_name], errors='coerce')
+                    # 有効な日付のみ文字列変換、無効な日付はNone
+                    df_converted[col_name] = dt_series.dt.strftime('%Y-%m-%d %H:%M:%S').where(pd.notna(dt_series), None)
+                except:
+                    # 変換失敗時はTEXTのまま
+                    pass
+            # TEXTはそのまま（文字列）
+        except Exception:
+            # 変換に失敗した場合はTEXTのまま
+            continue
+    
+    return df_converted
+
+
+def save_with_types(df: pd.DataFrame, table_name: str, conn: sqlite3.Connection, inferred_schema: Dict[str, str]):
+    """型指定付きでSQLiteテーブルを作成・保存（簡単版）"""
+    
+    # テーブル削除
+    conn.execute(f"DROP TABLE IF EXISTS {table_name}")
+    conn.commit()
+    
+    # データ挿入前の安全化
+    df_safe = df.copy()
+    
+    # すべてのNaN、NaT、pd.NAをNoneに置換
+    for col in df_safe.columns:
+        # pandas 特殊値をすべてNoneに統一
+        try:
+            mask = pd.isna(df_safe[col])
+            df_safe[col] = df_safe[col].where(~mask, None)
+        except:
+            # 変換エラーの場合はそのまま
+            pass
+    
+    # 単純にto_sqlを使用（型変換はDataFrame側で完了済み）
+    df_safe.to_sql(table_name, conn, if_exists='replace', index=False)
+
 def sanitize_table_name(file_name: str) -> str:
     """テーブル名をサニタイズ"""
     base_name = os.path.splitext(file_name)[0]
@@ -178,10 +234,22 @@ def load_and_compare():
             # テーブル名生成
             table_name = sanitize_table_name(file_name)
             
-            # SQLiteに保存
+            # SQLiteに保存（型変換付き）
             try:
-                df.to_sql(table_name, conn, if_exists='replace', index=False)
+                # column_masterから推定型情報を取得
+                inferred_schema = get_inferred_info(conn, file_name)
+                
+                # DataFrame列の型変換
+                df_typed = convert_dataframe_types(df, inferred_schema)
+                
+                # SQLiteに保存（型指定付き）
+                save_with_types(df_typed, table_name, conn, inferred_schema)
                 print(f"SQLite保存完了: {table_name}")
+                
+            except Exception as e:
+                print(f"SQLite保存失敗: {e}")
+                error_count += 1
+                continue
             except Exception as e:
                 print(f"SQLite保存失敗: {e}")
                 error_count += 1
@@ -226,11 +294,11 @@ def load_and_compare():
         report_path = os.path.join(OUTPUT_DIR, "compare_report.csv")
         try:
             pd.DataFrame(results).to_csv(report_path, index=False, encoding="utf-8-sig")
-            print(f"\n✅ 比較結果を出力しました → {report_path}")
+            print(f"\n 比較結果を出力しました → {report_path}")
         except Exception as e:
-            print(f"❌ CSV出力失敗: {e}")
+            print(f" CSV出力失敗: {e}")
     else:
-        print("❌ 処理可能なファイルがありませんでした")
+        print(" 処理可能なファイルがありませんでした")
 
 if __name__ == "__main__":
     load_and_compare()
