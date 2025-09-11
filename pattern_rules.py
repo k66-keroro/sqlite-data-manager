@@ -8,6 +8,8 @@ import re
 import pandas as pd
 from datetime import datetime
 import logging
+import json
+import os
 
 # ログ設定
 logging.basicConfig(level=logging.INFO)
@@ -18,63 +20,83 @@ class TypeCorrectionRules:
     
     def __init__(self):
         """修正ルールの初期化"""
-        
-        # ルール1: 未登録型対策（特殊ファイル）
-        self.unregistered_files = {
-            '払出明細（大阪）_ZPR01201.txt': {'encoding': 'shift_jis', 'separator': '\t'},
-            '払出明細（滋賀）_ZPR01201.txt': {'encoding': 'shift_jis', 'separator': '\t'},
-            'zs65.txt': {'encoding': 'utf-8', 'separator': '\t'},
-            'zs65_sss.txt': {'encoding': 'utf-8', 'separator': '\t'}
-        }
-        
-        # ルール2: DATETIME検出パターン強化
-        self.datetime_patterns = [
-            r'^\d{8}$',                    # YYYYMMDD
-            r'^\d{4}/\d{2}/\d{2}$',        # YYYY/MM/DD
-            r'^\d{4}-\d{2}-\d{2}$',        # YYYY-MM-DD
-            r'^\d{2}\.\d{2}\.\d{4}$',      # DD.MM.YYYY (SAP形式)
-            r'^\d{4}\d{2}\d{2}$',          # YYYYMMDD (区切り文字なし)
-            r'^\d{2}/\d{2}/\d{4}$',        # MM/DD/YYYY
-            r'^\d{4}\.\d{2}\.\d{2}$',      # YYYY.MM.DD
-        ]
-        
-        # ルール3: ビジネスロジック判定
-        self.business_logic_rules = {
-            # コードフィールド（数値のみでもTEXT扱い）
-            'code_fields': [
-                '保管場所', 'warehouse', 'storage', 'location',
-                '得意先', 'customer', 'client', 'shop',
-                '品目', 'item', 'material', 'product',
-                '工場', 'plant', 'factory', 'site',
-                '会社', 'company', 'comp'
-            ],
-            # 金額フィールド（INTEGERまたはREAL扱い）
-            'amount_fields': [
-                '原価', '単価', 'genka', 'tanka', 'price', 'cost', 'amount',
-                '金額', 'kingaku', '価格', 'kakaku', '値段', 'nedan',
-                '料金', 'ryoukin', 'fee', 'charge'
-            ],
-            # 数量フィールド（INTEGERまたはREAL扱い）
-            'quantity_fields': [
-                '数量', 'suuryou', 'qty', 'quantity', 'amount',
-                '個数', 'kosuu', 'count', 'number',
-                '重量', 'juuryou', 'weight', 'wt'
-            ]
-        }
-        
-        # ルール4: SAP特殊パターン対応
-        self.sap_patterns = {
-            'trailing_minus': r'^(\d+)-$',        # 後ろマイナス
-            'zero_padding': r'^0+(\d+)$',         # ゼロパディング
-            'decimal_comma': r'^(\d+),(\d+)$',    # カンマ小数点
-        }
+        self.rules_file = "pattern_rules_data.json"
+        self._load_rules_data()
+
+    def _load_rules_data(self):
+        """JSONファイルからルールデータをロードする"""
+        if os.path.exists(self.rules_file):
+            with open(self.rules_file, 'r', encoding='utf-8') as f:
+                self._rules_data = json.load(f)
+            logger.info(f"ルールデータを {self.rules_file} からロードしました。")
+        else:
+            # ファイルが存在しない場合はデフォルト値を設定し、保存する
+            self._rules_data = {
+                "unregistered_files": {
+                    '払出明細（大阪）_ZPR01201.txt': {'encoding': 'shift_jis', 'separator': '\t'},
+                    '払出明細（滋賀）_ZPR01201.txt': {'encoding': 'shift_jis', 'separator': '\t'},
+                    'zs65.txt': {'encoding': 'utf-8', 'separator': '\t'},
+                    'zs65_sss.txt': {'encoding': 'utf-8', 'separator': '\t'}
+                },
+                "datetime_patterns": [
+                    r'^\d{8}
+,
+                    r'^\d{4}/\d{2}/\d{2}
+,
+                    r'^\d{4}-\d{2}-\d{2}
+,
+                    r'^\d{2}\.\d{2}\.\d{4}
+,
+                    r'^\d{4}\d{2}\d{2}
+,
+                    r'^\d{2}/\d{2}/\d{4}
+,
+                    r'^\d{4}\.\d{2}\.\d{2}
+,
+                ],
+                "business_logic_rules": {
+                    'code_fields': [
+                        '保管場所', 'warehouse', 'storage', 'location',
+                        '得意先', 'customer', 'client', 'shop',
+                        '品目', 'item', 'material', 'product',
+                        '工場', 'plant', 'factory', 'site',
+                        '会社', 'company', 'comp'
+                    ],
+                    'amount_fields': [
+                        '原価', '単価', 'genka', 'tanka', 'price', 'cost', 'amount',
+                        '金額', 'kingaku', '価格', 'kakaku', '値段', 'nedan',
+                        '料金', 'ryoukin', 'fee', 'charge'
+                    ],
+                    'quantity_fields': [
+                        '数量', 'suuryou', 'qty', 'quantity', 'amount',
+                        '個数', 'kosuu', 'count', 'number',
+                        '重量', 'juuryou', 'weight', 'wt'
+                    ]
+                },
+                "sap_patterns": {
+                    'trailing_minus': r'^(\d+)-
+,
+                    'zero_padding': r'^0+(\d+)
+,
+                    'decimal_comma': r'^(\d+),(\d+)
+,
+                }
+            }
+            self._save_rules_data()
+            logger.info(f"デフォルトのルールデータを {self.rules_file} に保存しました。")
+
+    def _save_rules_data(self):
+        """ルールデータをJSONファイルに保存する"""
+        with open(self.rules_file, 'w', encoding='utf-8') as f:
+            json.dump(self._rules_data, f, indent=2, ensure_ascii=False)
+        logger.info(f"ルールデータを {self.rules_file} に保存しました。")
     
     def apply_file_specific_rules(self, file_name, data_sample):
         """ファイル固有のルール適用"""
         
-        if file_name in self.unregistered_files:
+        if file_name in self._rules_data['unregistered_files']:
             logger.info(f"特殊ファイル処理: {file_name}")
-            rules = self.unregistered_files[file_name]
+            rules = self._rules_data['unregistered_files'][file_name]
             
             # 特殊ファイルの場合、基本的にすべてTEXT扱い
             # ただし明らかに数値・日付の列は適切に判定
@@ -106,7 +128,7 @@ class TypeCorrectionRules:
             value_str = str(value).strip()
             
             # 各日付パターンでチェック
-            for pattern in self.datetime_patterns:
+            for pattern in self._rules_data['datetime_patterns']:
                 if re.match(pattern, value_str):
                     # さらに実際の日付として有効かチェック
                     if self._is_valid_date(value_str):
@@ -145,13 +167,13 @@ class TypeCorrectionRules:
         column_lower = column_name.lower()
         
         # コードフィールドの判定
-        for code_pattern in self.business_logic_rules['code_fields']:
+        for code_pattern in self._rules_data['business_logic_rules']['code_fields']:
             if code_pattern in column_lower:
                 logger.info(f"コードフィールド検出: {column_name} → TEXT")
                 return 'TEXT'
         
         # 金額フィールドの判定
-        for amount_pattern in self.business_logic_rules['amount_fields']:
+        for amount_pattern in self._rules_data['business_logic_rules']['amount_fields']:
             if amount_pattern in column_lower:
                 # 小数点を含むかチェック
                 sample_values = [str(v) for v in column_data if pd.notna(v)][:50]
@@ -162,7 +184,7 @@ class TypeCorrectionRules:
                 return result_type
         
         # 数量フィールドの判定
-        for qty_pattern in self.business_logic_rules['quantity_fields']:
+        for qty_pattern in self._rules_data['business_logic_rules']['quantity_fields']:
             if qty_pattern in column_lower:
                 # 小数点を含むかチェック
                 sample_values = [str(v) for v in column_data if pd.notna(v)][:50]
@@ -183,17 +205,17 @@ class TypeCorrectionRules:
         value_str = str(value).strip()
         
         # 後ろマイナスの処理
-        minus_match = re.match(self.sap_patterns['trailing_minus'], value_str)
+        minus_match = re.match(self._rules_data['sap_patterns']['trailing_minus'], value_str)
         if minus_match:
             return f"-{minus_match.group(1)}"
         
         # ゼロパディングの処理（ただしコードフィールドは除く）
-        zero_match = re.match(self.sap_patterns['zero_padding'], value_str)
+        zero_match = re.match(self._rules_data['sap_patterns']['zero_padding'], value_str)
         if zero_match and len(value_str) > 3:  # 3桁以上のゼロパディングのみ
             return zero_match.group(1)
         
         # カンマ小数点の処理
-        comma_match = re.match(self.sap_patterns['decimal_comma'], value_str)
+        comma_match = re.match(self._rules_data['sap_patterns']['decimal_comma'], value_str)
         if comma_match:
             return f"{comma_match.group(1)}.{comma_match.group(2)}"
         
