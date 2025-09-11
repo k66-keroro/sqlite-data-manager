@@ -204,6 +204,7 @@ with st.sidebar.expander("ビジネスロジックルール"):
                 st.session_state.corrector._rules_data['business_logic_rules'][category].append(new_keyword)
                 st.session_state.corrector._save_rules_data()
                 st.success(f"キーワード '{new_keyword}' を {category} に追加しました。")
+                st.session_state[f"new_keyword_input_{category}"] = "" # 入力フィールドをクリア
                 st.rerun()
             elif new_keyword in st.session_state.corrector._rules_data['business_logic_rules'][category]:
                 st.warning(f"キーワード '{new_keyword}' は既に {category} に存在します。")
@@ -230,35 +231,36 @@ with st.sidebar.expander("ビジネスロジックルール"):
                         st.session_state.corrector._save_rules_data()
                         st.success(f"キーワード '{keyword}' を {category} から削除しました。")
                         st.rerun()
-            st.markdown("--- ")
-
-    # 編集モード
-    if 'editing_business_logic_category' in st.session_state and st.session_state.editing_business_logic_category is not None:
-        st.write("---")
-        category_to_edit = st.session_state.editing_business_logic_category
-        index_to_edit = st.session_state.editing_business_logic_index
-        st.subheader(f"キーワード編集 ({category_to_edit.replace('_fields', '').capitalize()} フィールド - インデックス: {index_to_edit + 1})")
-        edited_keyword = st.text_input("キーワードを編集", value=st.session_state.editing_business_logic_value, key="edited_business_logic_keyword_input")
+            st.markdown("---")
         
-        col_edit_save, col_edit_cancel = st.columns(2)
-        with col_edit_save:
-            if st.button("変更を保存", key="save_edited_business_logic_keyword_button"):
-                if edited_keyword:
-                    st.session_state.corrector._rules_data['business_logic_rules'][category_to_edit][index_to_edit] = edited_keyword
-                    st.session_state.corrector._save_rules_data()
-                    st.success(f"キーワードを '{edited_keyword}' に更新しました。")
+        # 編集モード (各カテゴリのリスト表示の直後に配置)
+        if 'editing_business_logic_category' in st.session_state and st.session_state.editing_business_logic_category == category and st.session_state.editing_business_logic_index is not None:
+            st.write("---")
+            category_to_edit = st.session_state.editing_business_logic_category
+            index_to_edit = st.session_state.editing_business_logic_index
+            st.subheader(f"キーワード編集 ({category_to_edit.replace('_fields', '').capitalize()} フィールド - インデックス: {index_to_edit + 1})")
+            edited_keyword = st.text_input("キーワードを編集", value=st.session_state.editing_business_logic_value, key=f"edited_business_logic_keyword_input_inline_{category}") # キーをユニークにする
+            
+            col_edit_save, col_edit_cancel = st.columns(2)
+            with col_edit_save:
+                if st.button("変更を保存", key=f"save_edited_business_logic_keyword_button_inline_{category}"):
+                    if edited_keyword:
+                        st.session_state.corrector._rules_data['business_logic_rules'][category_to_edit][index_to_edit] = edited_keyword
+                        st.session_state.corrector._save_rules_data()
+                        st.success(f"キーワードを '{edited_keyword}' に更新しました。")
+                        del st.session_state.editing_business_logic_category
+                        del st.session_state.editing_business_logic_index
+                        del st.session_state.editing_business_logic_value
+                        st.rerun()
+                    else:
+                        st.warning("編集するキーワードを入力してください。")
+            with col_edit_cancel:
+                if st.button("キャンセル", key=f"cancel_edit_business_logic_keyword_button_inline_{category}"):
                     del st.session_state.editing_business_logic_category
                     del st.session_state.editing_business_logic_index
                     del st.session_state.editing_business_logic_value
                     st.rerun()
-                else:
-                    st.warning("編集するキーワードを入力してください。")
-        with col_edit_cancel:
-            if st.button("キャンセル", key="cancel_edit_business_logic_keyword_button"):
-                del st.session_state.editing_business_logic_category
-                del st.session_state.editing_business_logic_index
-                del st.session_state.editing_business_logic_value
-                st.rerun()
+            st.markdown("---") # 編集フォームの区切り
 
 with st.sidebar.expander("SAP特殊パターンルール"):
     st.json(st.session_state.corrector._rules_data['sap_patterns'])

@@ -35,7 +35,6 @@
       "得意先",
       "customer",
       "client",
-      "shop",
       "品目",
       "item",
       "material",
@@ -46,7 +45,8 @@
       "site",
       "会社",
       "company",
-      "comp"
+      "comp",
+      "shop"
     ],
     "amount_fields": [
       "原価",
@@ -65,7 +65,7 @@
       "料金",
       "ryoukin",
       "fee",
-      "charge"
+      "charg"
     ],
     "quantity_fields": [
       "数量",
