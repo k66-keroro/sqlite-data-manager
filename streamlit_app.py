@@ -59,7 +59,7 @@ with st.sidebar.expander("日付パターンルール"):
             st.session_state.corrector._rules_data['datetime_patterns'].append(new_datetime_pattern)
             st.session_state.corrector._save_rules_data()
             st.success(f"パターン '{new_datetime_pattern}' を追加しました。")
-            st.experimental_rerun() # 変更を反映するために再実行
+            st.rerun() # 変更を反映するために再実行
         elif new_datetime_pattern in st.session_state.corrector._rules_data['datetime_patterns']:
             st.warning(f"パターン '{new_datetime_pattern}' は既に存在します。")
         else:
@@ -77,13 +77,13 @@ with st.sidebar.expander("日付パターンルール"):
             if st.button("編集", key=f"edit_datetime_pattern_{i}"):
                 st.session_state.editing_datetime_pattern_index = i
                 st.session_state.editing_datetime_pattern_value = pattern
-                st.experimental_rerun()
+                st.rerun()
         with col3:
             if st.button("削除", key=f"delete_datetime_pattern_{i}"):
                 st.session_state.corrector._rules_data['datetime_patterns'].pop(i)
                 st.session_state.corrector._save_rules_data()
                 st.success(f"パターン '{pattern}' を削除しました。")
-                st.experimental_rerun() # 変更を反映するために再実行
+                st.rerun() # 変更を反映するために再実行
 
     # 編集モード
     if 'editing_datetime_pattern_index' in st.session_state and st.session_state.editing_datetime_pattern_index is not None:
@@ -100,14 +100,14 @@ with st.sidebar.expander("日付パターンルール"):
                     st.success(f"パターンを '{edited_pattern}' に更新しました。")
                     del st.session_state.editing_datetime_pattern_index
                     del st.session_state.editing_datetime_pattern_value
-                    st.experimental_rerun()
+                    st.rerun()
                 else:
                     st.warning("編集するパターンを入力してください。")
         with col_edit_cancel:
             if st.button("キャンセル", key="cancel_edit_datetime_pattern_button"):
                 del st.session_state.editing_datetime_pattern_index
                 del st.session_state.editing_datetime_pattern_value
-                st.experimental_rerun()
+                st.rerun()
 
 with st.sidebar.expander("ビジネスロジックルール"):
     st.json(st.session_state.corrector._rules_data['business_logic_rules'])
