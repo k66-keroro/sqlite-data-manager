@@ -50,7 +50,64 @@ with st.sidebar.expander("未登録ファイルルール"):
     st.json(st.session_state.corrector._rules_data['unregistered_files'])
 
 with st.sidebar.expander("日付パターンルール"):
-    st.json(st.session_state.corrector._rules_data['datetime_patterns'])
+    st.write("### 日付パターン管理")
+    
+    # 新しいパターンを追加
+    new_datetime_pattern = st.text_input("新しい日付パターンを追加", key="new_datetime_pattern_input")
+    if st.button("パターン追加", key="add_datetime_pattern_button"):
+        if new_datetime_pattern and new_datetime_pattern not in st.session_state.corrector._rules_data['datetime_patterns']:
+            st.session_state.corrector._rules_data['datetime_patterns'].append(new_datetime_pattern)
+            st.session_state.corrector._save_rules_data()
+            st.success(f"パターン '{new_datetime_pattern}' を追加しました。")
+            st.experimental_rerun() # 変更を反映するために再実行
+        elif new_datetime_pattern in st.session_state.corrector._rules_data['datetime_patterns']:
+            st.warning(f"パターン '{new_datetime_pattern}' は既に存在します。")
+        else:
+            st.warning("追加するパターンを入力してください。")
+
+    st.write("---")
+    st.write("### 既存の日付パターン")
+    
+    # 既存のパターンを表示・編集・削除
+    for i, pattern in enumerate(st.session_state.corrector._rules_data['datetime_patterns']):
+        col1, col2, col3 = st.columns([3, 1, 1])
+        with col1:
+            st.write(f"**{i+1}.** `{pattern}`")
+        with col2:
+            if st.button("編集", key=f"edit_datetime_pattern_{i}"):
+                st.session_state.editing_datetime_pattern_index = i
+                st.session_state.editing_datetime_pattern_value = pattern
+                st.experimental_rerun()
+        with col3:
+            if st.button("削除", key=f"delete_datetime_pattern_{i}"):
+                st.session_state.corrector._rules_data['datetime_patterns'].pop(i)
+                st.session_state.corrector._save_rules_data()
+                st.success(f"パターン '{pattern}' を削除しました。")
+                st.experimental_rerun() # 変更を反映するために再実行
+
+    # 編集モード
+    if 'editing_datetime_pattern_index' in st.session_state and st.session_state.editing_datetime_pattern_index is not None:
+        st.write("---")
+        st.subheader(f"パターン編集 (インデックス: {st.session_state.editing_datetime_pattern_index + 1})")
+        edited_pattern = st.text_input("パターンを編集", value=st.session_state.editing_datetime_pattern_value, key="edited_datetime_pattern_input")
+        
+        col_edit_save, col_edit_cancel = st.columns(2)
+        with col_edit_save:
+            if st.button("変更を保存", key="save_edited_datetime_pattern_button"):
+                if edited_pattern:
+                    st.session_state.corrector._rules_data['datetime_patterns'][st.session_state.editing_datetime_pattern_index] = edited_pattern
+                    st.session_state.corrector._save_rules_data()
+                    st.success(f"パターンを '{edited_pattern}' に更新しました。")
+                    del st.session_state.editing_datetime_pattern_index
+                    del st.session_state.editing_datetime_pattern_value
+                    st.experimental_rerun()
+                else:
+                    st.warning("編集するパターンを入力してください。")
+        with col_edit_cancel:
+            if st.button("キャンセル", key="cancel_edit_datetime_pattern_button"):
+                del st.session_state.editing_datetime_pattern_index
+                del st.session_state.editing_datetime_pattern_value
+                st.experimental_rerun()
 
 with st.sidebar.expander("ビジネスロジックルール"):
     st.json(st.session_state.corrector._rules_data['business_logic_rules'])

@@ -1,9 +1,21 @@
 {
   "unregistered_files": {
-    "払出明細（大阪）_ZPR01201.txt": {"encoding": "shift_jis", "separator": "\t"},
-    "払出明細（滋賀）_ZPR01201.txt": {"encoding": "shift_jis", "separator": "\t"},
-    "zs65.txt": {"encoding": "utf-8", "separator": "\t"},
-    "zs65_sss.txt": {"encoding": "utf-8", "separator": "\t"}
+    "払出明細（大阪）_ZPR01201.txt": {
+      "encoding": "shift_jis",
+      "separator": "\t"
+    },
+    "払出明細（滋賀）_ZPR01201.txt": {
+      "encoding": "shift_jis",
+      "separator": "\t"
+    },
+    "zs65.txt": {
+      "encoding": "utf-8",
+      "separator": "\t"
+    },
+    "zs65_sss.txt": {
+      "encoding": "utf-8",
+      "separator": "\t"
+    }
   },
   "datetime_patterns": [
     "^\\d{8}$",
@@ -16,21 +28,59 @@
   ],
   "business_logic_rules": {
     "code_fields": [
-      "保管場所", "warehouse", "storage", "location",
-      "得意先", "customer", "client", "shop",
-      "品目", "item", "material", "product",
-      "工場", "plant", "factory", "site",
-      "会社", "company", "comp"
+      "保管場所",
+      "warehouse",
+      "storage",
+      "location",
+      "得意先",
+      "customer",
+      "client",
+      "shop",
+      "品目",
+      "item",
+      "material",
+      "product",
+      "工場",
+      "plant",
+      "factory",
+      "site",
+      "会社",
+      "company",
+      "comp"
     ],
     "amount_fields": [
-      "原価", "単価", "genka", "tanka", "price", "cost", "amount",
-      "金額", "kingaku", "価格", "kakaku", "値段", "nedan",
-      "料金", "ryoukin", "fee", "charge"
+      "原価",
+      "単価",
+      "genka",
+      "tanka",
+      "price",
+      "cost",
+      "amount",
+      "金額",
+      "kingaku",
+      "価格",
+      "kakaku",
+      "値段",
+      "nedan",
+      "料金",
+      "ryoukin",
+      "fee",
+      "charge"
     ],
     "quantity_fields": [
-      "数量", "suuryou", "qty", "quantity", "amount",
-      "個数", "kosuu", "count", "number",
-      "重量", "juuryou", "weight", "wt"
+      "数量",
+      "suuryou",
+      "qty",
+      "quantity",
+      "amount",
+      "個数",
+      "kosuu",
+      "count",
+      "number",
+      "重量",
+      "juuryou",
+      "weight",
+      "wt"
     ]
   },
   "sap_patterns": {
