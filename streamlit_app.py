@@ -16,6 +16,11 @@ st.set_page_config(layout="wide", page_title="SQLite Data Manager GUI")
 
 st.title("SQLite Data Manager GUI")
 
+# TypeCorrectionRulesのインスタンスを作成
+# Streamlitのセッションステートに保存して、再実行時に再初期化されないようにする
+if 'corrector' not in st.session_state:
+    st.session_state.corrector = pattern_rules.TypeCorrectionRules()
+
 # --- サイドバー ---
 st.sidebar.header("操作メニュー")
 
@@ -37,9 +42,29 @@ if st.sidebar.button("本番用DB初期化"):
     except Exception as e:
         st.sidebar.error(f"本番用DB初期化中にエラーが発生しました: {e}")
 
-# パターンルール管理セクション (プレースホルダー)
+# パターンルール管理セクション
 st.sidebar.subheader("パターンルール管理")
-st.sidebar.write("ここにパターンルール管理機能が追加されます。")
+
+# ルールデータを表示
+with st.sidebar.expander("未登録ファイルルール"):
+    st.json(st.session_state.corrector._rules_data['unregistered_files'])
+
+with st.sidebar.expander("日付パターンルール"):
+    st.json(st.session_state.corrector._rules_data['datetime_patterns'])
+
+with st.sidebar.expander("ビジネスロジックルール"):
+    st.json(st.session_state.corrector._rules_data['business_logic_rules'])
+
+with st.sidebar.expander("SAP特殊パターンルール"):
+    st.json(st.session_state.corrector._rules_data['sap_patterns'])
+
+# ルール変更を保存するボタン
+if st.sidebar.button("ルール変更を保存"):
+    try:
+        st.session_state.corrector._save_rules_data()
+        st.sidebar.success("ルールが正常に保存されました。")
+    except Exception as e:
+        st.sidebar.error(f"ルールの保存中にエラーが発生しました: {e}")
 
 # --- メインコンテンツ ---
 st.header("データ処理")
