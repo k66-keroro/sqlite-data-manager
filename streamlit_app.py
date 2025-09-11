@@ -190,7 +190,75 @@ with st.sidebar.expander("日付パターンルール"):
                 st.rerun()
 
 with st.sidebar.expander("ビジネスロジックルール"):
-    st.json(st.session_state.corrector._rules_data['business_logic_rules'])
+    st.write("### ビジネスロジックルール管理")
+
+    rule_categories = ['code_fields', 'amount_fields', 'quantity_fields']
+
+    for category in rule_categories:
+        st.subheader(f"{category.replace('_fields', '').capitalize()} フィールド")
+        
+        # 新しいキーワードを追加
+        new_keyword = st.text_input(f"新しいキーワードを追加 ({category})", key=f"new_keyword_input_{category}")
+        if st.button(f"キーワード追加 ({category})", key=f"add_keyword_button_{category}"):
+            if new_keyword and new_keyword not in st.session_state.corrector._rules_data['business_logic_rules'][category]:
+                st.session_state.corrector._rules_data['business_logic_rules'][category].append(new_keyword)
+                st.session_state.corrector._save_rules_data()
+                st.success(f"キーワード '{new_keyword}' を {category} に追加しました。")
+                st.rerun()
+            elif new_keyword in st.session_state.corrector._rules_data['business_logic_rules'][category]:
+                st.warning(f"キーワード '{new_keyword}' は既に {category} に存在します。")
+            else:
+                st.warning("追加するキーワードを入力してください。")
+
+        st.write("#### 既存のキーワード")
+        
+        # 既存のキーワードを表示・編集・削除
+        if st.session_state.corrector._rules_data['business_logic_rules'][category]:
+            for i, keyword in enumerate(st.session_state.corrector._rules_data['business_logic_rules'][category]):
+                col1, col2, col3 = st.columns([3, 1, 1])
+                with col1:
+                    st.write(f"**{i+1}.** `{keyword}`")
+                with col2:
+                    if st.button("編集", key=f"edit_keyword_{category}_{i}"):
+                        st.session_state.editing_business_logic_category = category
+                        st.session_state.editing_business_logic_index = i
+                        st.session_state.editing_business_logic_value = keyword
+                        st.rerun()
+                with col3:
+                    if st.button("削除", key=f"delete_keyword_{category}_{i}"):
+                        st.session_state.corrector._rules_data['business_logic_rules'][category].pop(i)
+                        st.session_state.corrector._save_rules_data()
+                        st.success(f"キーワード '{keyword}' を {category} から削除しました。")
+                        st.rerun()
+            st.markdown("--- ")
+
+    # 編集モード
+    if 'editing_business_logic_category' in st.session_state and st.session_state.editing_business_logic_category is not None:
+        st.write("---")
+        category_to_edit = st.session_state.editing_business_logic_category
+        index_to_edit = st.session_state.editing_business_logic_index
+        st.subheader(f"キーワード編集 ({category_to_edit.replace('_fields', '').capitalize()} フィールド - インデックス: {index_to_edit + 1})")
+        edited_keyword = st.text_input("キーワードを編集", value=st.session_state.editing_business_logic_value, key="edited_business_logic_keyword_input")
+        
+        col_edit_save, col_edit_cancel = st.columns(2)
+        with col_edit_save:
+            if st.button("変更を保存", key="save_edited_business_logic_keyword_button"):
+                if edited_keyword:
+                    st.session_state.corrector._rules_data['business_logic_rules'][category_to_edit][index_to_edit] = edited_keyword
+                    st.session_state.corrector._save_rules_data()
+                    st.success(f"キーワードを '{edited_keyword}' に更新しました。")
+                    del st.session_state.editing_business_logic_category
+                    del st.session_state.editing_business_logic_index
+                    del st.session_state.editing_business_logic_value
+                    st.rerun()
+                else:
+                    st.warning("編集するキーワードを入力してください。")
+        with col_edit_cancel:
+            if st.button("キャンセル", key="cancel_edit_business_logic_keyword_button"):
+                del st.session_state.editing_business_logic_category
+                del st.session_state.editing_business_logic_index
+                del st.session_state.editing_business_logic_value
+                st.rerun()
 
 with st.sidebar.expander("SAP特殊パターンルール"):
     st.json(st.session_state.corrector._rules_data['sap_patterns'])
