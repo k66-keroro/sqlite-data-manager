@@ -45,15 +45,87 @@ if st.sidebar.button("本番用DB初期化"):
 # パターンルール管理セクション
 st.sidebar.subheader("パターンルール管理")
 
-# ルールデータを表示
-with st.sidebar.expander("未登録ファイルルール"):    st.write("### 未登録ファイルルール管理")    
-    # 新しいルールを追加    st.subheader("新しいルールを追加")    new_file_name = st.text_input("ファイル名", key="new_unregistered_file_name")    new_encoding = st.text_input("エンコーディング", value="shift_jis", key="new_unregistered_encoding")    new_separator = st.text_input("セパレータ (例: \t for タブ)", value="\t", key="new_unregistered_separator")    
-    if st.button("ルール追加", key="add_unregistered_rule_button"):        if new_file_name and new_encoding and new_separator:            if new_file_name not in st.session_state.corrector._rules_data['unregistered_files']:                st.session_state.corrector._rules_data['unregistered_files'][new_file_name] = {                    "encoding": new_encoding,                    "separator": new_separator                }                st.session_state.corrector._save_rules_data()                st.success(f"ファイル '{new_file_name}' のルールを追加しました。")                st.rerun()            else:                st.warning(f"ファイル '{new_file_name}' のルールは既に存在します。")        else:            st.warning("すべてのフィールドを入力してください。")    
-    st.write("---")    st.write("### 既存の未登録ファイルルール")    
-    # 既存のルールを表示・編集・削除    if st.session_state.corrector._rules_data['unregistered_files']:        for file_name, rules in st.session_state.corrector._rules_data['unregistered_files'].items():            col1, col2, col3, col4 = st.columns([3, 2, 1, 1])            with col1:                st.write(f"**ファイル名:** `{file_name}`")                st.write(f"**エンコーディング:** `{rules['encoding']}`")                st.write(f"**セパレータ:** `{rules['separator']}`")            with col3:                if st.button("編集", key=f"edit_unregistered_rule_{file_name}"):                    st.session_state.editing_unregistered_file_name = file_name                    st.session_state.editing_unregistered_encoding = rules['encoding']                    st.session_state.editing_unregistered_separator = rules['separator']                    st.rerun()            with col4:                if st.button("削除", key=f"delete_unregistered_rule_{file_name}"):                    del st.session_state.corrector._rules_data['unregistered_files'][file_name]                    st.session_state.corrector._save_rules_data()                    st.success(f"ファイル '{file_name}' のルールを削除しました。")                    st.rerun()            st.markdown("--- ")    
-    # 編集モード    if 'editing_unregistered_file_name' in st.session_state and st.session_state.editing_unregistered_file_name is not None:        st.write("---")        st.subheader(f"ルール編集 (ファイル名: {st.session_state.editing_unregistered_file_name})")        
-        edited_file_name = st.text_input("ファイル名 (変更不可)", value=st.session_state.editing_unregistered_file_name, disabled=True, key="edited_unregistered_file_name_display")        edited_encoding = st.text_input("エンコーディング", value=st.session_state.editing_unregistered_encoding, key="edited_unregistered_encoding_input")        edited_separator = st.text_input("セパレータ", value=st.session_state.editing_unregistered_separator, key="edited_unregistered_separator_input")        
-        col_edit_save, col_edit_cancel = st.columns(2)        with col_edit_save:            if st.button("変更を保存", key="save_edited_unregistered_rule_button"):                if edited_encoding and edited_separator:                    st.session_state.corrector._rules_data['unregistered_files'][st.session_state.editing_unregistered_file_name] = {                        "encoding": edited_encoding,                        "separator": edited_separator                    }                    st.session_state.corrector._save_rules_data()                    st.success(f"ファイル '{st.session_state.editing_unregistered_file_name}' のルールを更新しました。")                    del st.session_state.editing_unregistered_file_name                    del st.session_state.editing_unregistered_encoding                    del st.session_state.editing_unregistered_separator                    st.rerun()                else:                    st.warning("エンコーディングとセパレータを入力してください。")        with col_edit_cancel:            if st.button("キャンセル", key="cancel_edit_unregistered_rule_button"):                del st.session_state.editing_unregistered_file_name                del st.session_state.editing_unregistered_encoding                del st.session_state.editing_unregistered_separator                st.rerun()
+# 未登録ファイルルール
+with st.sidebar.expander("未登録ファイルルール"):
+    st.write("### 未登録ファイルルール管理")
+    
+    # 新しいルールを追加
+    st.subheader("新しいルールを追加")
+    new_file_name = st.text_input("ファイル名", key="new_unregistered_file_name")
+    new_encoding = st.text_input("エンコーディング", value="shift_jis", key="new_unregistered_encoding")
+    new_separator = st.text_input("セパレータ (例: \t for タブ)", value="\t", key="new_unregistered_separator")
+    
+    if st.button("ルール追加", key="add_unregistered_rule_button"):
+        if new_file_name and new_encoding and new_separator:
+            if new_file_name not in st.session_state.corrector._rules_data['unregistered_files']:
+                st.session_state.corrector._rules_data['unregistered_files'][new_file_name] = {
+                    "encoding": new_encoding,
+                    "separator": new_separator
+                }
+                st.session_state.corrector._save_rules_data()
+                st.success(f"ファイル '{new_file_name}' のルールを追加しました。")
+                st.rerun()
+            else:
+                st.warning(f"ファイル '{new_file_name}' のルールは既に存在します。")
+        else:
+            st.warning("すべてのフィールドを入力してください。")
+
+    st.write("---")
+    st.write("### 既存の未登録ファイルルール")
+    
+    # 既存のルールを表示・編集・削除
+    if st.session_state.corrector._rules_data['unregistered_files']:
+        for file_name, rules in st.session_state.corrector._rules_data['unregistered_files'].items():
+            col1, col2, col3, col4 = st.columns([3, 2, 1, 1])
+            with col1:
+                st.write(f"**ファイル名:** `{file_name}`")
+                st.write(f"**エンコーディング:** `{rules['encoding']}`")
+                st.write(f"**セパレータ:** `{rules['separator']}`")
+            with col3:
+                if st.button("編集", key=f"edit_unregistered_rule_{file_name}"):
+                    st.session_state.editing_unregistered_file_name = file_name
+                    st.session_state.editing_unregistered_encoding = rules['encoding']
+                    st.session_state.editing_unregistered_separator = rules['separator']
+                    st.rerun()
+            with col4:
+                if st.button("削除", key=f"delete_unregistered_rule_{file_name}"):
+                    del st.session_state.corrector._rules_data['unregistered_files'][file_name]
+                    st.session_state.corrector._save_rules_data()
+                    st.success(f"ファイル '{file_name}' のルールを削除しました。")
+                    st.rerun()
+            st.markdown("---")
+
+    # 編集モード
+    if 'editing_unregistered_file_name' in st.session_state and st.session_state.editing_unregistered_file_name is not None:
+        st.write("---")
+        st.subheader(f"ルール編集 (ファイル名: {st.session_state.editing_unregistered_file_name})")
+        
+        edited_file_name = st.text_input("ファイル名 (変更不可)", value=st.session_state.editing_unregistered_file_name, disabled=True, key="edited_unregistered_file_name_display")
+        edited_encoding = st.text_input("エンコーディング", value=st.session_state.editing_unregistered_encoding, key="edited_unregistered_encoding_input")
+        edited_separator = st.text_input("セパレータ", value=st.session_state.editing_unregistered_separator, key="edited_unregistered_separator_input")
+        
+        col_edit_save, col_edit_cancel = st.columns(2)
+        with col_edit_save:
+            if st.button("変更を保存", key="save_edited_unregistered_rule_button"):
+                if edited_encoding and edited_separator:
+                    st.session_state.corrector._rules_data['unregistered_files'][st.session_state.editing_unregistered_file_name] = {
+                        "encoding": edited_encoding,
+                        "separator": edited_separator
+                    }
+                    st.session_state.corrector._save_rules_data()
+                    st.success(f"ファイル '{st.session_state.editing_unregistered_file_name}' のルールを更新しました。")
+                    del st.session_state.editing_unregistered_file_name
+                    del st.session_state.editing_unregistered_encoding
+                    del st.session_state.editing_unregistered_separator
+                    st.rerun()
+                else:
+                    st.warning("エンコーディングとセパレータを入力してください。")
+        with col_edit_cancel:
+            if st.button("キャンセル", key="cancel_edit_unregistered_rule_button"):
+                del st.session_state.editing_unregistered_file_name
+                del st.session_state.editing_unregistered_encoding
+                del st.session_state.editing_unregistered_separator
+                st.rerun()
 
 with st.sidebar.expander("日付パターンルール"):
     st.write("### 日付パターン管理")
