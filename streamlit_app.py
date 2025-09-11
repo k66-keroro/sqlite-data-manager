@@ -52,8 +52,8 @@ with st.sidebar.expander("未登録ファイルルール"):
     # 新しいルールを追加
     st.subheader("新しいルールを追加")
     new_file_name = st.text_input("ファイル名", key="new_unregistered_file_name")
-    new_encoding = st.text_input("エンコーディング", value="shift_jis", key="new_unregistered_encoding")
-    new_separator = st.text_input("セパレータ (例: \t for タブ)", value="\t", key="new_unregistered_separator")
+    new_encoding = st.selectbox("エンコーディング", options=["shift_jis", "utf-8", "cp932", "euc_jp"], index=0, key="new_unregistered_encoding")
+    new_separator = st.selectbox("セパレータ", options=["\t", ",", ";", " "], index=0, key="new_unregistered_separator")
     
     if st.button("ルール追加", key="add_unregistered_rule_button"):
         if new_file_name and new_encoding and new_separator:
@@ -101,8 +101,8 @@ with st.sidebar.expander("未登録ファイルルール"):
         st.subheader(f"ルール編集 (ファイル名: {st.session_state.editing_unregistered_file_name})")
         
         edited_file_name = st.text_input("ファイル名 (変更不可)", value=st.session_state.editing_unregistered_file_name, disabled=True, key="edited_unregistered_file_name_display")
-        edited_encoding = st.text_input("エンコーディング", value=st.session_state.editing_unregistered_encoding, key="edited_unregistered_encoding_input")
-        edited_separator = st.text_input("セパレータ", value=st.session_state.editing_unregistered_separator, key="edited_unregistered_separator_input")
+        edited_encoding = st.selectbox("エンコーディング", options=["shift_jis", "utf-8", "cp932", "euc_jp"], index=["shift_jis", "utf-8", "cp932", "euc_jp"].index(st.session_state.editing_unregistered_encoding), key="edited_unregistered_encoding_input")
+        edited_separator = st.selectbox("セパレータ", options=["\t", ",", ";", " "], index=["\t", ",", ";", " "].index(st.session_state.editing_unregistered_separator), key="edited_unregistered_separator_input")
         
         col_edit_save, col_edit_cancel = st.columns(2)
         with col_edit_save:
