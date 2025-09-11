@@ -198,18 +198,20 @@ with st.sidebar.expander("ビジネスロジックルール"):
         st.subheader(f"{category.replace('_fields', '').capitalize()} フィールド")
         
         # 新しいキーワードを追加
-        new_keyword = st.text_input(f"新しいキーワードを追加 ({category})", key=f"new_keyword_input_{category}")
-        if st.button(f"キーワード追加 ({category})", key=f"add_keyword_button_{category}"):
-            if new_keyword and new_keyword not in st.session_state.corrector._rules_data['business_logic_rules'][category]:
-                st.session_state.corrector._rules_data['business_logic_rules'][category].append(new_keyword)
-                st.session_state.corrector._save_rules_data()
-                st.success(f"キーワード '{new_keyword}' を {category} に追加しました。")
-                st.session_state[f"new_keyword_input_{category}"] = "" # 入力フィールドをクリア
-                st.rerun()
-            elif new_keyword in st.session_state.corrector._rules_data['business_logic_rules'][category]:
-                st.warning(f"キーワード '{new_keyword}' は既に {category} に存在します。")
-            else:
-                st.warning("追加するキーワードを入力してください。")
+        with st.form(key=f"add_keyword_form_{category}"):
+            new_keyword = st.text_input(f"新しいキーワードを追加 ({category})", key=f"new_keyword_input_{category}")
+            add_button = st.form_submit_button(f"キーワード追加 ({category})")
+
+            if add_button:
+                if new_keyword and new_keyword not in st.session_state.corrector._rules_data['business_logic_rules'][category]:
+                    st.session_state.corrector._rules_data['business_logic_rules'][category].append(new_keyword)
+                    st.session_state.corrector._save_rules_data()
+                    st.success(f"キーワード '{new_keyword}' を {category} に追加しました。")
+                    st.rerun()
+                elif new_keyword in st.session_state.corrector._rules_data['business_logic_rules'][category]:
+                    st.warning(f"キーワード '{new_keyword}' は既に {category} に存在します。")
+                else:
+                    st.warning("追加するキーワードを入力してください。")
 
         st.write("#### 既存のキーワード")
         
