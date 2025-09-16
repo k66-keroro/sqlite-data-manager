@@ -110,6 +110,15 @@ def detect_delimiter(file_path, encoding, sample_lines=5):
 def analyze_files(data_dir, output_file, db_file="master.db"):
     results = []
 
+    # ルールを先に読み込んでおく
+    try:
+        from pattern_rules import TypeCorrectionRules
+        corrector = TypeCorrectionRules()
+        unregistered_rules = corrector._rules_data.get('unregistered_files', {})
+    except ImportError:
+        corrector = None
+        unregistered_rules = {}
+
     for file_name in os.listdir(data_dir):
         file_path = os.path.join(data_dir, file_name)
 
@@ -117,6 +126,25 @@ def analyze_files(data_dir, output_file, db_file="master.db"):
             continue
         if any(file_name.lower().endswith(ext) for ext in SKIP_EXTENSIONS):
             continue
+
+        # 未登録ファイルルールを先に試す
+        if file_name in unregistered_rules:
+            rule = unregistered_rules[file_name]
+            enc, delimiter = rule['encoding'], rule['separator']
+            logger.info(f"未登録ファイルルール適用: {file_name} (Encoding: {enc}, Delimiter: '{delimiter}')")
+            try:
+                df = pd.read_csv(file_path, delimiter=delimiter, dtype=str, nrows=200, encoding=enc, engine="python")
+                for col in df.columns:
+                    initial_type, corrected_type = infer_sqlite_type(df[col], col, file_name)
+                    results.append({
+                        "file_name": file_name, "column_name": col,
+                        "Inferred_Type": corrected_type, "Initial_Inferred_Type": initial_type,
+                        "Encoding": enc, "Delimiter": delimiter
+                    })
+                logger.info(f"未登録ファイル処理成功: {file_name}")
+                continue # 次のファイルへ
+            except Exception as e:
+                logger.warning(f"未登録ファイルルールでの読み込み失敗: {file_name}, {e}. 通常の処理にフォールバックします。")
 
         # Excel
         if file_name.lower().endswith((".xls", ".xlsx")):

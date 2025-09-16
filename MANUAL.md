@@ -277,7 +277,7 @@ python t002_analyzer.py
 
 **特定される問題**:
 1. **未登録型**: Inferred_Type_未登録のファイル
-2. **DATETIME問題**: TEXT判定されるべきDATETIME型
+2. **DATETIME問題**: DATETIMEと判定されるべきだがTEXTになってしまう問題
 3. **INTEGER問題**: TEXT変更が必要なINTEGER型  
 4. **保管場所コード**: 数値だがTEXTが適切なフィールド
 

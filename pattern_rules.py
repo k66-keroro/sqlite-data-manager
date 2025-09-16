@@ -221,14 +221,13 @@ class TypeCorrectionRules:
         """総合的な型修正判定"""
         
         logger.info(f"型修正判定: {file_name}:{column_name} (初期推定: {original_inferred_type})")
-        
-        # 1. t002_loader_updates.jsonからのオーバーライドを最優先でチェック
-        #    (loader.pyが生成するt002_loader_updates.jsonを読み込む想定)
-        #    ここでは、analyzer.pyがTypeCorrectionRulesを呼び出す際に、
-        #    t002_loader_updates.jsonのルールを適用するロジックは含まれていないため、
-        #    この部分はコメントアウトまたは別の方法で処理する必要があります。
-        #    現在のanalyzer.pyのロジックでは、t002_loader_updates.jsonはloader.pyで読み込まれます。
-        #    ここでは、pattern_rules.jsonにルールを生成するための判定を行います。
+
+        # 1. DATETIME検出を最優先で実行
+        #    もし明確に日付だとわかれば、他のルール（特にキーワードベースのビジネスロジック）で上書きされるのを防ぐ
+        datetime_result = self.enhance_datetime_detection(column_data, column_name)
+        if datetime_result == 'DATETIME':
+            logger.info(f"DATETIME検出強化: {column_name} → DATETIME")
+            return 'DATETIME'
 
         # 2. ファイル固有ルール (未登録ファイルなど)
         file_rules = self.apply_file_specific_rules(file_name, column_data)
@@ -241,17 +240,8 @@ class TypeCorrectionRules:
         if business_result:
             logger.info(f"ビジネスロジック適用: {column_name} → {business_result}")
             return business_result
-
-        # 4. DATETIME検出強化 (初期推定がDATETIMEでない場合にのみ適用)
-        #    t002_pattern_fixer.pyがDATETIME→TEXTのルールを生成するために、
-        #    ここではDATETIMEと推定されたものをそのまま返す。
-        #    DATETIME→TEXTへの強制変換はt002_loader_updates.jsonの役割。
-        datetime_result = self.enhance_datetime_detection(column_data, column_name)
-        if datetime_result == 'DATETIME' and original_inferred_type != 'DATETIME':
-            logger.info(f"DATETIME検出強化: {column_name} → DATETIME")
-            return 'DATETIME'
         
-        # 5. その他の修正ルールがない場合、元の推定を維持
+        # 4. その他の修正ルールがない場合、元の推定を維持
         return original_inferred_type
 
 

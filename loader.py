@@ -306,7 +306,15 @@ def load_and_compare():
             # 結果作成
             for col_name, actual_type in actual_schema.items():
                 inferred_type = inferred_schema.get(col_name, "（未登録）")
-                match = (actual_type.upper() == inferred_type.upper()) if inferred_type != "（未登録）" else False
+
+                # 比較ロジックを修正: DATETIMEとTIMESTAMPを一致とみなす
+                actual_upper = actual_type.upper()
+                inferred_upper = inferred_type.upper()
+
+                if inferred_upper == "DATETIME" and actual_upper == "TIMESTAMP":
+                    match = True
+                else:
+                    match = (actual_upper == inferred_upper) if inferred_type != "（未登録）" else False
                 
                 results.append({
                     "File": file_name,
