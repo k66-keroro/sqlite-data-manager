@@ -124,47 +124,12 @@ def get_inferred_info(conn: sqlite3.Connection, file_name: str) -> Dict[str, str
     except Exception: # E722: Do not use bare `except`
         return {}
 
-
-
-
-# t002_loader_updates.jsonをロードする関数
-def load_t002_loader_updates(file_path: str = "t002_loader_updates.json") -> Dict[str, List[Dict]]:
-    """t002_loader_updates.jsonから型オーバーライドルールをロード"""
-    if not Path(file_path).exists():
-        print(f"警告: {file_path} が見つかりません。型オーバーライドは適用されません。")
-        return {"datetime_override_fields": [], "storage_code_fields": []}
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-            return {
-                "datetime_override_fields": data.get("datetime_override_fields", []),
-                "storage_code_fields": data.get("storage_code_fields", [])
-            }
-    except Exception as e:
-        print(f"エラー: {file_path} の読み込み中に問題が発生しました: {e}")
-        return {"datetime_override_fields": [], "storage_code_fields": []}
-
-def convert_dataframe_types(df: pd.DataFrame, inferred_schema: Dict[str, str], file_name: str, type_overrides: Dict[str, List[Dict]]) -> pd.DataFrame:
+def convert_dataframe_types(df: pd.DataFrame, inferred_schema: Dict[str, str], file_name: str) -> pd.DataFrame:
     """DataFrameの列を推定型に応じて変換"""
     df_converted = df.copy()
     
     for col_name, inferred_type in inferred_schema.items():
         if col_name not in df_converted.columns:
-            continue
-            
-        # t002_loader_updates.jsonからのオーバーライドをチェック
-        is_datetime_override = any(
-            item['file'] == file_name and item['field'] == col_name
-            for item in type_overrides.get('datetime_override_fields', [])
-        )
-        is_storage_code_override = any(
-            item['file'] == file_name and item['field'] == col_name
-            for item in type_overrides.get('storage_code_fields', [])
-        )
-
-        if is_datetime_override or is_storage_code_override:
-            print(f"デバッグ: 型オーバーライド適用: {file_name}:{col_name} -> TEXT (元: {inferred_type})")
-            # 強制的にTEXTとして扱うため、型変換をスキップ
             continue
             
         try:
@@ -230,9 +195,6 @@ def load_and_compare():
     processor = SimpleFileProcessor()
     results = []
     
-    # 型オーバーライドルールをロード
-    type_overrides = load_t002_loader_updates()
-    
     # ディレクトリ確認
     if not os.path.exists(DATA_DIR):
         print(f"エラー: データディレクトリが見つかりません: {DATA_DIR}")
@@ -284,7 +246,7 @@ def load_and_compare():
                 inferred_schema = get_inferred_info(conn, file_name)
                 
                 # DataFrame列の型変換
-                df_typed = convert_dataframe_types(df, inferred_schema, file_name, type_overrides)
+                df_typed = convert_dataframe_types(df, inferred_schema, file_name)
                 
                 # SQLiteに保存（型指定付き）
                 save_with_types(df_typed, table_name, conn, inferred_schema)
