@@ -196,6 +196,41 @@ with st.sidebar.expander("日付パターンルール"):
                 del st.session_state.editing_datetime_pattern_value
                 st.rerun()
 
+with st.sidebar.expander("日付フォーマット管理"):
+    st.write("### 日付フォーマット管理")
+    st.info("日付として妥当か検証するためのフォーマット文字列（例: `%Y-%m-%d`）を管理します。")
+
+    # 新しいフォーマットを追加
+    new_datetime_format = st.text_input("新しい日付フォーマットを追加", key="new_datetime_format_input")
+    if st.button("フォーマット追加", key="add_datetime_format_button"):
+        if new_datetime_format and new_datetime_format not in st.session_state.corrector._rules_data.get('datetime_formats', []):
+            if 'datetime_formats' not in st.session_state.corrector._rules_data:
+                st.session_state.corrector._rules_data['datetime_formats'] = []
+            st.session_state.corrector._rules_data['datetime_formats'].append(new_datetime_format)
+            st.session_state.corrector._save_rules_data()
+            st.success(f"フォーマット '{new_datetime_format}' を追加しました。")
+            st.rerun()
+        elif new_datetime_format in st.session_state.corrector._rules_data.get('datetime_formats', []):
+            st.warning(f"フォーマット '{new_datetime_format}' は既に存在します。")
+        else:
+            st.warning("追加するフォーマットを入力してください。")
+
+    st.write("---")
+    st.write("### 既存の日付フォーマット")
+
+    # 既存のフォーマットを表示・削除
+    if st.session_state.corrector._rules_data.get('datetime_formats'):
+        for i, fmt in enumerate(st.session_state.corrector._rules_data['datetime_formats']):
+            col1, col2 = st.columns([4, 1])
+            with col1:
+                st.write(f"**{i+1}.** `{fmt}`")
+            with col2:
+                if st.button("削除", key=f"delete_datetime_format_{i}"):
+                    st.session_state.corrector._rules_data['datetime_formats'].pop(i)
+                    st.session_state.corrector._save_rules_data()
+                    st.success(f"フォーマット '{fmt}' を削除しました。")
+                    st.rerun()
+
 with st.sidebar.expander("ビジネスロジックルール"):
     st.write("### ビジネスロジックルール管理")
 

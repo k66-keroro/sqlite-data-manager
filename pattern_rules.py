@@ -39,13 +39,21 @@ class TypeCorrectionRules:
                     'zs65_sss.txt': {'encoding': 'utf-8', 'separator': '\t'}
                 },
                 "datetime_patterns": [
-                    r'^\d{8}$' ,
-                    r'^\d{4}/\d{2}/\d{2}$' ,
-                    r'^\d{4}-\d{2}-\d{2}$' ,
-                    r'^\d{2}\.\d{2}\.\d{4}$' ,
-                    r'^\d{4}\d{2}\d{2}$' ,
-                    r'^\d{2}/\d{2}/\d{4}$' ,
+                    r'^\d{8}$',
+                    r'^\d{4}/\d{2}/\d{2}$',
+                    r'^\d{4}-\d{2}-\d{2}$',
+                    r'^\d{2}\.\d{2}\.\d{4}$',
+                    r'^\d{4}\d{2}\d{2}$',
+                    r'^\d{2}/\d{2}/\d{4}$',
                     r'^\d{4}\.\d{2}\.\d{2}$'
+                ],
+                "datetime_formats": [
+                    "%Y%m%d",
+                    "%Y/%m/%d",
+                    "%Y-%m-%d",
+                    "%d.%m.%Y",
+                    "%m/%d/%Y",
+                    "%Y.%m.%d"
                 ],
                 "business_logic_rules": {
                     'code_fields': [
@@ -137,10 +145,8 @@ class TypeCorrectionRules:
     def _is_valid_date(self, date_string):
         """日付文字列の妥当性チェック"""
         
-        date_formats = [
-            '%Y%m%d', '%Y/%m/%d', '%Y-%m-%d',
-            '%d.%m.%Y', '%m/%d/%Y', '%Y.%m.%d'
-        ]
+        # 設定ファイルから日付フォーマットのリストを読み込む
+        date_formats = self._rules_data.get('datetime_formats', [])
         
         for fmt in date_formats:
             try:
