@@ -175,13 +175,11 @@ def convert_dataframe_types(df: pd.DataFrame, inferred_schema: Dict[str, str], f
                 # 実数変換（エラー値はNoneに）
                 df_converted[col_name] = pd.to_numeric(df_converted[col_name], errors='coerce').astype('float64')
             elif inferred_type == "DATETIME":
-                # 日付変換 → 文字列形式で保存（SQLiteのTimestamp問題回避）
+                # 日付変換。エラーはNaT(Not a Time)となり、to_sqlによってNULLとして扱われる
                 try:
-                    dt_series = pd.to_datetime(df_converted[col_name], errors='coerce')
-                    # 有効な日付のみ文字列変換、無効な日付はNone
-                    df_converted[col_name] = dt_series.dt.strftime('%Y-%m-%d %H:%M:%S').where(pd.notna(dt_series), None)
+                    df_converted[col_name] = pd.to_datetime(df_converted[col_name], errors='coerce')
                 except Exception: # E722: Do not use bare `except`
-                    # 変換失敗時はTEXTのまま
+                    # 変換に失敗した場合は、列をそのままにしておく（おそらくTEXT型）
                     pass
             # TEXTはそのまま（文字列）
         except Exception: # E722: Do not use bare `except`
