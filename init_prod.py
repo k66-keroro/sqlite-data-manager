@@ -1,33 +1,45 @@
 import sqlite3
+import logging # 追加
 from config import DB_FILE
 
-def init_db_prod():
-    conn = sqlite3.connect(DB_FILE)
-    cur = conn.cursor()
+logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s') # 追加
 
-    # テーブルが存在しない場合は作成
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS column_master (
-            file_name TEXT,
-            column_name TEXT,
-            data_type TEXT,
-            encoding TEXT,
-            delimiter TEXT,
-            PRIMARY KEY (file_name, column_name)
-        )
-    """)
+def init_db_prod() -> bool:
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cur = conn.cursor()
 
-    # encoding列がなければ追加
-    cur.execute("PRAGMA table_info(column_master)")
-    columns = [row[1] for row in cur.fetchall()]
-    if "encoding" not in columns:
-        cur.execute("ALTER TABLE column_master ADD COLUMN encoding TEXT")
-        print("テーブルに encoding 列を追加しました")
+        # テーブルが存在しない場合は作成
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS column_master (
+                file_name TEXT,
+                column_name TEXT,
+                data_type TEXT,
+                initial_inferred_type TEXT,
+                encoding TEXT,
+                delimiter TEXT,
+                PRIMARY KEY (file_name, column_name)
+            )
+        """)
 
-    if "delimiter" not in columns:
-        cur.execute("ALTER TABLE column_master ADD COLUMN delimiter TEXT")
-        print("テーブルに delimiter 列を追加しました")
+        # initial_inferred_type列がなければ追加
+        cur.execute("PRAGMA table_info(column_master)")
+        columns = [row[1] for row in cur.fetchall()]
+        if "initial_inferred_type" not in columns:
+            cur.execute("ALTER TABLE column_master ADD COLUMN initial_inferred_type TEXT")
 
-    conn.commit()
-    conn.close()
-    print(f"DBチェック完了（本番モード）: {DB_FILE}")
+        if "encoding" not in columns:
+            cur.execute("ALTER TABLE column_master ADD COLUMN encoding TEXT")
+            
+
+        if "delimiter" not in columns:
+            cur.execute("ALTER TABLE column_master ADD COLUMN delimiter TEXT")
+            
+
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        logging.error(f"本番用DB初期化中にエラーが発生しました: {e}") # ログ出力追加
+        return False
+    

@@ -214,24 +214,38 @@ class TypeCorrectionRules:
     def correct_type(self, file_name, column_name, column_data, original_inferred_type):
         """総合的な型修正判定"""
         
-        logger.info(f"型修正判定: {file_name}:{column_name} ({original_inferred_type})")
+        logger.info(f"型修正判定: {file_name}:{column_name} (初期推定: {original_inferred_type})")
         
-        # 1. ファイル固有ルール
+        # 1. t002_loader_updates.jsonからのオーバーライドを最優先でチェック
+        #    (loader.pyが生成するt002_loader_updates.jsonを読み込む想定)
+        #    ここでは、analyzer.pyがTypeCorrectionRulesを呼び出す際に、
+        #    t002_loader_updates.jsonのルールを適用するロジックは含まれていないため、
+        #    この部分はコメントアウトまたは別の方法で処理する必要があります。
+        #    現在のanalyzer.pyのロジックでは、t002_loader_updates.jsonはloader.pyで読み込まれます。
+        #    ここでは、pattern_rules.jsonにルールを生成するための判定を行います。
+
+        # 2. ファイル固有ルール (未登録ファイルなど)
         file_rules = self.apply_file_specific_rules(file_name, column_data)
         if file_rules and file_rules.get('default_type'):
+            logger.info(f"ファイル固有ルール適用: {column_name} → {file_rules['default_type']}")
             return file_rules['default_type']
         
-        # 2. DATETIME検出強化
-        datetime_result = self.enhance_datetime_detection(column_data, column_name)
-        if datetime_result == 'DATETIME':
-            return 'DATETIME'
-        
-        # 3. ビジネスロジック適用
+        # 3. ビジネスロジック適用 (コード、金額、数量など)
         business_result = self.apply_business_logic(column_name, column_data, original_inferred_type)
         if business_result:
+            logger.info(f"ビジネスロジック適用: {column_name} → {business_result}")
             return business_result
+
+        # 4. DATETIME検出強化 (初期推定がDATETIMEでない場合にのみ適用)
+        #    t002_pattern_fixer.pyがDATETIME→TEXTのルールを生成するために、
+        #    ここではDATETIMEと推定されたものをそのまま返す。
+        #    DATETIME→TEXTへの強制変換はt002_loader_updates.jsonの役割。
+        datetime_result = self.enhance_datetime_detection(column_data, column_name)
+        if datetime_result == 'DATETIME' and original_inferred_type != 'DATETIME':
+            logger.info(f"DATETIME検出強化: {column_name} → DATETIME")
+            return 'DATETIME'
         
-        # 4. その他の修正ルールがない場合、元の推定を維持
+        # 5. その他の修正ルールがない場合、元の推定を維持
         return original_inferred_type
 
 

@@ -1,12 +1,16 @@
 import os
 import pandas as pd
 import sqlite3
+import logging # 追加
 from config import DELIMITERS, ENCODINGS, SKIP_EXTENSIONS
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s') # 追加
+logger = logging.getLogger(__name__) # 追加
 
 def infer_sqlite_type(series, column_name, file_name=None):
     """改良版：SAP対応 + T002修正ルール適用型推定"""
     
-    # T002修正ルールの導入
+    # 1. TypeCorrectionRulesのインスタンス化
     try:
         from pattern_rules import TypeCorrectionRules
         corrector = TypeCorrectionRules()
@@ -15,21 +19,21 @@ def infer_sqlite_type(series, column_name, file_name=None):
     
     s = series.dropna().astype(str)
     if len(s) == 0:
-        result = "TEXT"
+        initial_inferred_type = "TEXT"
     else:
         # 既存のロジック実行
-        result = _original_infer_logic(s, column_name)
+        initial_inferred_type = _original_infer_logic(s, column_name)
     
-    # T002修正ルール適用
+    # 2. T002修正ルール適用
     if corrector and file_name:
         corrected_type = corrector.correct_type(
-            file_name, column_name, series, result
+            file_name, column_name, series, initial_inferred_type
         )
-        if corrected_type != result:
-            print(f"[T002] 型修正: {file_name}:{column_name} {result}→{corrected_type}")
-        return corrected_type
+        if corrected_type != initial_inferred_type:
+            print(f"[T002] 型修正: {file_name}:{column_name} {initial_inferred_type}→{corrected_type}")
+        return initial_inferred_type, corrected_type # 初期推定型と修正後の型を両方返す
     
-    return result
+    return initial_inferred_type, initial_inferred_type # 修正ルールがない場合も両方返す
 
 def _original_infer_logic(s, column_name):
     """元の型推定ロジック（T002修正前）"""
@@ -119,11 +123,12 @@ def analyze_files(data_dir, output_file, db_file="master.db"):
             try:
                 df = pd.read_excel(file_path, nrows=200, dtype=str)
                 for col in df.columns:
-                    sqlite_type = infer_sqlite_type(df[col], col, file_name)
+                    initial_type, corrected_type = infer_sqlite_type(df[col], col, file_name)
                     results.append({
-                        "File": file_name,
-                        "Column": col,
-                        "Inferred_Type": sqlite_type,
+                        "file_name": file_name,
+                        "column_name": col,
+                        "Inferred_Type": corrected_type, # 修正後の型を格納
+                        "Initial_Inferred_Type": initial_type, # 初期推定型を格納
                         "Encoding": "excel",
                         "Delimiter": None
                     })
@@ -139,11 +144,12 @@ def analyze_files(data_dir, output_file, db_file="master.db"):
                 delimiter = detect_delimiter(file_path, enc)
                 df = pd.read_csv(file_path, delimiter=delimiter, dtype=str, nrows=200, encoding=enc, engine="python")
                 for col in df.columns:
-                    sqlite_type = infer_sqlite_type(df[col], col, file_name)
+                    initial_type, corrected_type = infer_sqlite_type(df[col], col, file_name)
                     results.append({
-                        "File": file_name,
-                        "Column": col,
-                        "Inferred_Type": sqlite_type,
+                        "file_name": file_name,
+                        "column_name": col,
+                        "Inferred_Type": corrected_type, # 修正後の型を格納
+                        "Initial_Inferred_Type": initial_type, # 初期推定型を格納
                         "Encoding": enc,
                         "Delimiter": delimiter
                     })
@@ -168,6 +174,7 @@ def analyze_files(data_dir, output_file, db_file="master.db"):
             file_name TEXT,
             column_name TEXT,
             data_type TEXT,
+            initial_inferred_type TEXT,
             encoding TEXT,
             delimiter TEXT,
             PRIMARY KEY (file_name, column_name)
@@ -176,15 +183,18 @@ def analyze_files(data_dir, output_file, db_file="master.db"):
 
     for row in results:
         cur.execute("""
-            INSERT INTO column_master (file_name, column_name, data_type, encoding, delimiter)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO column_master (file_name, column_name, data_type, initial_inferred_type, encoding, delimiter)
+            VALUES (?, ?, ?, ?, ?, ?)
             ON CONFLICT(file_name, column_name)
             DO UPDATE SET 
                 data_type=excluded.data_type,
+                initial_inferred_type=excluded.initial_inferred_type,
                 encoding=excluded.encoding,
                 delimiter=excluded.delimiter
-        """, (row["File"], row["Column"], row["Inferred_Type"], row.get("Encoding"), row.get("Delimiter")))
+        """, (row["file_name"], row["column_name"], row["Inferred_Type"], row["Initial_Inferred_Type"], row.get("Encoding"), row.get("Delimiter")))
 
     conn.commit()
     conn.close()
     print(f"SQLiteに保存しました → {db_file}")
+
+    return pd.DataFrame(results) # DataFrameを返すように変更

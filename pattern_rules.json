@@ -1,0 +1,55 @@
+{
+  "summary": {
+    "generated_at": "2025-09-16T14:30:07.252594",
+    "total_fixes": 5,
+    "pattern_counts": {
+      "pattern1_fixes": 0,
+      "pattern2_fixes": 4,
+      "pattern3_fixes": 0,
+      "pattern4_fixes": 1
+    }
+  },
+  "fix_rules": {
+    "pattern1_fixes": [],
+    "pattern2_fixes": [
+      {
+        "file_name": "GetSekkeiWBSJisseki.txt",
+        "field_name": "COMP_SCH_DT",
+        "from_type": "DATETIME",
+        "to_type": "TEXT",
+        "reason": "DATETIME推論エラー (実際はTEXT)"
+      },
+      {
+        "file_name": "zs45.txt",
+        "field_name": "TecComp",
+        "from_type": "DATETIME",
+        "to_type": "TEXT",
+        "reason": "DATETIME推論エラー (実際はTEXT)"
+      },
+      {
+        "file_name": "ZS61KDAY.csv",
+        "field_name": "工場出庫可能日",
+        "from_type": "DATETIME",
+        "to_type": "TEXT",
+        "reason": "DATETIME推論エラー (実際はTEXT)"
+      },
+      {
+        "file_name": "ZS61KDAY.csv",
+        "field_name": "工場回答日",
+        "from_type": "DATETIME",
+        "to_type": "TEXT",
+        "reason": "DATETIME推論エラー (実際はTEXT)"
+      }
+    ],
+    "pattern3_fixes": [],
+    "pattern4_fixes": [
+      {
+        "file_name": "zm114.txt",
+        "field_name": "保管場所",
+        "from_type": "INTEGER",
+        "to_type": "TEXT",
+        "reason": "保管場所コードは文字列として扱う"
+      }
+    ]
+  }
+}

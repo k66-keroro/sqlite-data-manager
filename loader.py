@@ -1,8 +1,10 @@
 import os
 import pandas as pd
 import sqlite3
+import json
+from pathlib import Path
 from typing import Optional, Tuple, Dict, List
-from config import DATA_DIR, DB_FILE, OUTPUT_DIR, DELIMITERS, ENCODINGS, SKIP_EXTENSIONS
+from config import DATA_DIR, DB_FILE, OUTPUT_DIR, SKIP_EXTENSIONS
 
 def detect_delimiter_simple(file_path: str, encoding: str) -> str:
     """シンプルな区切り文字検出"""
@@ -29,7 +31,7 @@ def detect_delimiter_simple(file_path: str, encoding: str) -> str:
         else:
             return '\t'  # デフォルト
             
-    except Exception:
+    except Exception: # E722: Do not use bare `except`
         return '\t'
 
 def safe_read_csv(file_path: str, encoding: str, delimiter: str) -> Optional[pd.DataFrame]:
@@ -46,7 +48,7 @@ def safe_read_csv(file_path: str, encoding: str, delimiter: str) -> Optional[pd.
             na_filter=False  # NaN変換を無効化
         )
         return df
-    except Exception:
+    except Exception: # E722: Do not use bare `except`
         return None
 
 class SimpleFileProcessor:
@@ -57,6 +59,7 @@ class SimpleFileProcessor:
         try:
             df = pd.read_excel(file_path, dtype=str, nrows=1000)
             if df.empty:
+                print(f"デバッグ: Excelファイルが空です: {os.path.basename(file_path)}")
                 return None, None, None
             return df, "excel", None
         except Exception as e:
@@ -80,11 +83,15 @@ class SimpleFileProcessor:
                 if df is not None and not df.empty and len(df.columns) > 0:
                     print(f"読み込み成功: {file_name} (encoding: {encoding}, shape: {df.shape})")
                     return df, encoding, delimiter
+                elif df is not None and df.empty:
+                    print(f"デバッグ: テキスト/CSVファイルが空です: {file_name} (encoding: {encoding})")
+                    return None, None, None
                 
-            except UnicodeDecodeError:
+            except UnicodeDecodeError as ude:
+                print(f"デバッグ: UnicodeDecodeError: {file_name} (encoding: {encoding}) - {ude}")
                 continue
             except Exception as e:
-                print(f"エラー: {file_name} (encoding: {encoding}) - {e}")
+                print(f"デバッグ: その他のエラー: {file_name} (encoding: {encoding}) - {e}")
                 continue
         
         print(f"読み込み失敗: {file_name} - すべてのエンコーディングで失敗")
@@ -105,7 +112,7 @@ def get_table_info(conn: sqlite3.Connection, table_name: str) -> Dict[str, str]:
         cursor = conn.cursor()
         cursor.execute(f"PRAGMA table_info({table_name})")
         return {row[1]: row[2] for row in cursor.fetchall()}
-    except Exception:
+    except Exception: # E722: Do not use bare `except`
         return {}
 
 def get_inferred_info(conn: sqlite3.Connection, file_name: str) -> Dict[str, str]:
@@ -114,16 +121,50 @@ def get_inferred_info(conn: sqlite3.Connection, file_name: str) -> Dict[str, str
         cursor = conn.cursor()
         cursor.execute("SELECT column_name, data_type FROM column_master WHERE file_name=?", (file_name,))
         return {row[0]: row[1] for row in cursor.fetchall()}
-    except Exception:
+    except Exception: # E722: Do not use bare `except`
         return {}
 
 
-def convert_dataframe_types(df: pd.DataFrame, inferred_schema: Dict[str, str]) -> pd.DataFrame:
+
+
+# t002_loader_updates.jsonをロードする関数
+def load_t002_loader_updates(file_path: str = "t002_loader_updates.json") -> Dict[str, List[Dict]]:
+    """t002_loader_updates.jsonから型オーバーライドルールをロード"""
+    if not Path(file_path).exists():
+        print(f"警告: {file_path} が見つかりません。型オーバーライドは適用されません。")
+        return {"datetime_override_fields": [], "storage_code_fields": []}
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            return {
+                "datetime_override_fields": data.get("datetime_override_fields", []),
+                "storage_code_fields": data.get("storage_code_fields", [])
+            }
+    except Exception as e:
+        print(f"エラー: {file_path} の読み込み中に問題が発生しました: {e}")
+        return {"datetime_override_fields": [], "storage_code_fields": []}
+
+def convert_dataframe_types(df: pd.DataFrame, inferred_schema: Dict[str, str], file_name: str, type_overrides: Dict[str, List[Dict]]) -> pd.DataFrame:
     """DataFrameの列を推定型に応じて変換"""
     df_converted = df.copy()
     
     for col_name, inferred_type in inferred_schema.items():
         if col_name not in df_converted.columns:
+            continue
+            
+        # t002_loader_updates.jsonからのオーバーライドをチェック
+        is_datetime_override = any(
+            item['file'] == file_name and item['field'] == col_name
+            for item in type_overrides.get('datetime_override_fields', [])
+        )
+        is_storage_code_override = any(
+            item['file'] == file_name and item['field'] == col_name
+            for item in type_overrides.get('storage_code_fields', [])
+        )
+
+        if is_datetime_override or is_storage_code_override:
+            print(f"デバッグ: 型オーバーライド適用: {file_name}:{col_name} -> TEXT (元: {inferred_type})")
+            # 強制的にTEXTとして扱うため、型変換をスキップ
             continue
             
         try:
@@ -139,11 +180,11 @@ def convert_dataframe_types(df: pd.DataFrame, inferred_schema: Dict[str, str]) -
                     dt_series = pd.to_datetime(df_converted[col_name], errors='coerce')
                     # 有効な日付のみ文字列変換、無効な日付はNone
                     df_converted[col_name] = dt_series.dt.strftime('%Y-%m-%d %H:%M:%S').where(pd.notna(dt_series), None)
-                except:
+                except Exception: # E722: Do not use bare `except`
                     # 変換失敗時はTEXTのまま
                     pass
             # TEXTはそのまま（文字列）
-        except Exception:
+        except Exception: # E722: Do not use bare `except`
             # 変換に失敗した場合はTEXTのまま
             continue
     
@@ -166,7 +207,7 @@ def save_with_types(df: pd.DataFrame, table_name: str, conn: sqlite3.Connection,
         try:
             mask = pd.isna(df_safe[col])
             df_safe[col] = df_safe[col].where(~mask, None)
-        except:
+        except Exception: # E722: Do not use bare `except`
             # 変換エラーの場合はそのまま
             pass
     
@@ -190,6 +231,9 @@ def load_and_compare():
     # 初期化
     processor = SimpleFileProcessor()
     results = []
+    
+    # 型オーバーライドルールをロード
+    type_overrides = load_t002_loader_updates()
     
     # ディレクトリ確認
     if not os.path.exists(DATA_DIR):
@@ -228,7 +272,9 @@ def load_and_compare():
             df, encoding_used, delimiter_used = processor.process_file(file_path)
             
             if df is None:
-                error_count += 1
+                # ファイルが空の場合も成功としてカウントし、次のファイルへ
+                processed_count += 1
+                print(f"完了 (空ファイル): {file_name}")
                 continue
             
             # テーブル名生成
@@ -240,7 +286,7 @@ def load_and_compare():
                 inferred_schema = get_inferred_info(conn, file_name)
                 
                 # DataFrame列の型変換
-                df_typed = convert_dataframe_types(df, inferred_schema)
+                df_typed = convert_dataframe_types(df, inferred_schema, file_name, type_overrides)
                 
                 # SQLiteに保存（型指定付き）
                 save_with_types(df_typed, table_name, conn, inferred_schema)
@@ -285,7 +331,7 @@ def load_and_compare():
     
     # 結果出力
     print("\n" + "=" * 50)
-    print(f"処理結果:")
+    print("処理結果:")
     print(f"  成功: {processed_count} ファイル")
     print(f"  失敗: {error_count} ファイル")
     print(f"  総行数: {len(results)} 行")

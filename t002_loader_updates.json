@@ -1,0 +1,32 @@
+{
+  "datetime_override_fields": [
+    {
+      "file": "GetSekkeiWBSJisseki.txt",
+      "field": "COMP_SCH_DT",
+      "action": "force_text"
+    },
+    {
+      "file": "zs45.txt",
+      "field": "TecComp",
+      "action": "force_text"
+    },
+    {
+      "file": "ZS61KDAY.csv",
+      "field": "工場出庫可能日",
+      "action": "force_text"
+    },
+    {
+      "file": "ZS61KDAY.csv",
+      "field": "工場回答日",
+      "action": "force_text"
+    }
+  ],
+  "storage_code_fields": [
+    {
+      "file": "zm114.txt",
+      "field": "保管場所",
+      "action": "force_text"
+    }
+  ],
+  "total_overrides": 5
+}

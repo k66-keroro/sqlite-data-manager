@@ -18,6 +18,9 @@ import json
 from pathlib import Path
 from typing import Dict, List, Tuple, Any
 import logging
+import os # 追加
+import sqlite3 # 追加
+from config import OUTPUT_DIR # 追加
 
 # ログ設定
 logging.basicConfig(level=logging.INFO)
@@ -26,14 +29,14 @@ logger = logging.getLogger(__name__)
 class T002PatternFixer:
     """T002問題パターン修正クラス"""
     
-    def __init__(self, compare_report_path: str = "output/compare_report.csv"):
+    def __init__(self, db_file: str = os.path.join(OUTPUT_DIR, "master.db")):
         """
         初期化
         
         Args:
-            compare_report_path: compare_report.csvのパス
+            db_file: SQLiteデータベースファイルのパス
         """
-        self.compare_report_path = compare_report_path
+        self.db_file = db_file
         self.pattern_rules = self._load_pattern_rules()
         self.df_compare = None
         
@@ -90,13 +93,21 @@ class T002PatternFixer:
         return pattern_rules
     
     def load_compare_report(self) -> pd.DataFrame:
-        """compare_report.csvを読み込み"""
+        """column_masterテーブルを読み込み"""
         try:
-            self.df_compare = pd.read_csv(self.compare_report_path, encoding='utf-8')
-            logger.info(f"compare_report.csv読み込み完了: {len(self.df_compare)}行")
+            conn = sqlite3.connect(self.db_file)
+            # column_masterテーブルからデータを読み込む
+            # Actual_Typeは、analyzer.pyで推定されたInferred_Typeをそのまま使用
+            self.df_compare = pd.read_sql_query("SELECT file_name AS File, column_name AS Column, initial_inferred_type AS Inferred_Type, data_type AS Actual_Type FROM column_master", conn)
+            conn.close()
+            # デバッグ用: df_compareの内容をCSVに出力
+            debug_output_path = os.path.join(OUTPUT_DIR, "debug_df_compare.csv")
+            self.df_compare.to_csv(debug_output_path, index=False, encoding="utf-8-sig")
+            print(f"デバッグ: df_compareの内容を {debug_output_path} に出力しました。")
+            print(f"column_masterテーブル読み込み完了: {len(self.df_compare)}行")
             return self.df_compare
         except Exception as e:
-            logger.error(f"compare_report.csv読み込みエラー: {e}")
+            logger.error(f"column_masterテーブル読み込みエラー: {e}")
             raise
     
     def analyze_pattern1_unregistered(self) -> pd.DataFrame:
@@ -114,11 +125,9 @@ class T002PatternFixer:
         logger.info(f"未登録型フィールド: {len(unregistered)}件")
         
         # ファイル別の集計
-        file_summary = unregistered.groupby('File_Name').agg({
-            'Field_Name': 'count',
-            'Actual_Type_TEXT': 'mean',
-            'Actual_Type_INTEGER': 'mean',
-            'Actual_Type_REAL': 'mean'
+        file_summary = unregistered.groupby('File').agg({
+            'Column': 'count',
+            'Actual_Type': lambda x: (x == 'TEXT').mean()
         }).round(3)
         
         print("=== 未登録型ファイル別集計 ===")
@@ -131,16 +140,21 @@ class T002PatternFixer:
         if self.df_compare is None:
             self.load_compare_report()
         
-        # DATETIME推論だが実際はTEXTが多い
-        datetime_issues = self.df_compare[
+        print(f"デバッグ: analyze_pattern2_datetime_issues - df_compare.columns: {self.df_compare.columns}")
+        print(f"デバッグ: analyze_pattern2_datetime_issues - df_compare.head():\n{self.df_compare.head()}")
+
+        # DATETIME推論だが実際はTEXTになっている
+        condition = (
             (self.df_compare['Inferred_Type'] == 'DATETIME') &
-            (self.df_compare['Actual_Type_TEXT'] > 0.5)
-        ]
+            (self.df_compare['Actual_Type'] == 'TEXT')
+        )
+        print(f"デバッグ: analyze_pattern2_datetime_issues - condition.sum(): {condition.sum()}")
+        datetime_issues = self.df_compare[condition]
         
-        logger.info(f"DATETIME問題フィールド: {len(datetime_issues)}件")
+        print(f"DATETIME問題フィールド: {len(datetime_issues)}件")
         
         # 詳細分析
-        summary = datetime_issues[['File_Name', 'Field_Name', 'Actual_Type_TEXT', 'Actual_Type_DATETIME']].copy()
+        summary = datetime_issues[['File', 'Column', 'Inferred_Type', 'Actual_Type']].copy()
         
         print("=== DATETIME→TEXT修正対象 ===")
         print(summary.head(10))
@@ -155,12 +169,12 @@ class T002PatternFixer:
         # INTEGER推論だが実際はTEXTが多い
         integer_issues = self.df_compare[
             (self.df_compare['Inferred_Type'] == 'INTEGER') &
-            (self.df_compare['Actual_Type_TEXT'] > self.df_compare['Actual_Type_INTEGER'])
+            (self.df_compare['Actual_Type'] == 'TEXT')
         ]
         
         # 金額・価格・原価・単価関連フィールドをフィルタ
         price_related = integer_issues[
-            integer_issues['Field_Name'].str.contains(
+            integer_issues['Column'].str.contains(
                 r'原価|単価|金額|価格|料金|費用', 
                 regex=True, 
                 na=False
@@ -170,7 +184,7 @@ class T002PatternFixer:
         logger.info(f"INTEGER→TEXT修正対象: {len(price_related)}件")
         
         print("=== INTEGER→TEXT修正対象（価格関連） ===")
-        print(price_related[['File_Name', 'Field_Name', 'Actual_Type_TEXT', 'Actual_Type_INTEGER']].head(10))
+        print(price_related[['File', 'Column', 'Inferred_Type', 'Actual_Type']].head(10))
         
         return price_related
     
@@ -181,14 +195,14 @@ class T002PatternFixer:
         
         # zm114.txtの保管場所関連フィールド
         storage_issues = self.df_compare[
-            (self.df_compare['File_Name'] == 'zm114.txt') &
-            (self.df_compare['Field_Name'].str.contains('保管場所', na=False))
+            (self.df_compare['File'] == 'zm114.txt') &
+            (self.df_compare['Column'].str.contains('保管場所', na=False))
         ]
         
         logger.info(f"保管場所コード問題: {len(storage_issues)}件")
         
         print("=== 保管場所コード修正対象 ===")
-        print(storage_issues[['Field_Name', 'Inferred_Type', 'Actual_Type_TEXT', 'Actual_Type_INTEGER']])
+        print(storage_issues[['Column', 'Inferred_Type', 'Actual_Type']])
         
         return storage_issues
     
@@ -204,52 +218,52 @@ class T002PatternFixer:
         # パターン1: 未登録型修正
         unregistered = self.analyze_pattern1_unregistered()
         for _, row in unregistered.iterrows():
-            # 実際の型分布から最適型を判定
-            if row['Actual_Type_TEXT'] > 0.7:
+            # 実際の型から最適型を判定
+            if row['Actual_Type'] == 'TEXT':
                 suggested_type = 'TEXT'
-            elif row['Actual_Type_INTEGER'] > 0.7:
-                suggested_type = 'INTEGER'
-            elif row['Actual_Type_REAL'] > 0.7:
+            elif row['Actual_Type'] == 'INTEGER':
+                suggested_type = 'INTEGER'  
+            elif row['Actual_Type'] == 'REAL':
                 suggested_type = 'REAL'
             else:
                 suggested_type = 'TEXT'  # デフォルト
                 
             fix_rules["pattern1_fixes"].append({
-                "file_name": row['File_Name'],
-                "field_name": row['Field_Name'],
+                "file_name": row['File'],
+                "field_name": row['Column'],
                 "from_type": "Unknown",
                 "to_type": suggested_type,
-                "confidence": max(row['Actual_Type_TEXT'], row['Actual_Type_INTEGER'], row['Actual_Type_REAL'])
+                "confidence": 1.0  # 実際の型に基づくため確信度高
             })
         
         # パターン2: DATETIME→TEXT修正
         datetime_issues = self.analyze_pattern2_datetime_issues()
         for _, row in datetime_issues.iterrows():
             fix_rules["pattern2_fixes"].append({
-                "file_name": row['File_Name'],
-                "field_name": row['Field_Name'],
+                "file_name": row['File'],
+                "field_name": row['Column'],
                 "from_type": "DATETIME",
                 "to_type": "TEXT",
-                "reason": f"TEXT比率: {row['Actual_Type_TEXT']:.3f}"
+                "reason": f"DATETIME推論エラー (実際は{row['Actual_Type']})"
             })
         
         # パターン3: INTEGER→TEXT修正
         integer_issues = self.analyze_pattern3_integer_issues()
         for _, row in integer_issues.iterrows():
             fix_rules["pattern3_fixes"].append({
-                "file_name": row['File_Name'],
-                "field_name": row['Field_Name'],
+                "file_name": row['File'],
+                "field_name": row['Column'],
                 "from_type": "INTEGER",
                 "to_type": "TEXT",
-                "reason": f"価格関連フィールド, TEXT比率: {row['Actual_Type_TEXT']:.3f}"
+                "reason": f"価格関連フィールド (実際は{row['Actual_Type']})"
             })
         
         # パターン4: 保管場所コード修正
         storage_issues = self.analyze_pattern4_storage_location()
         for _, row in storage_issues.iterrows():
             fix_rules["pattern4_fixes"].append({
-                "file_name": row['File_Name'],
-                "field_name": row['Field_Name'],
+                "file_name": row['File'],
+                "field_name": row['Column'],
                 "from_type": "INTEGER",
                 "to_type": "TEXT",
                 "reason": "保管場所コードは文字列として扱う"

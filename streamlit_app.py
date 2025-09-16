@@ -11,6 +11,11 @@ from init_prod import init_db_prod
 from analyzer import analyze_files
 from loader import load_and_compare
 import pattern_rules # パターンルール管理のためにインポート
+from t002_pattern_fixer import T002PatternFixer # 追加
+from t002_rule_applier import T002RuleApplier # 追加
+import master_manager # 追加
+import mapper # 追加
+from t003_rule_integration import RuleIntegrationManager # T003統合機能
 
 st.set_page_config(layout="wide", page_title="SQLite Data Manager GUI")
 
@@ -27,20 +32,24 @@ st.sidebar.header("操作メニュー")
 # DB初期化セクション
 st.sidebar.subheader("データベース初期化")
 if st.sidebar.button("開発用DB初期化"):
-    st.sidebar.info("開発用データベースを初期化中...")
-    try:
-        init_db_dev()
-        st.sidebar.success("開発用データベースの初期化が完了しました。")
-    except Exception as e:
-        st.sidebar.error(f"開発用DB初期化中にエラーが発生しました: {e}")
+    # メッセージ表示用のプレースホルダーを作成
+    status_message = st.sidebar.empty()
+    status_message.info("開発用データベースを初期化中...")
+    
+    if init_db_dev():
+        status_message.success("開発用データベースの初期化が完了しました。")
+    else:
+        status_message.error("開発用DB初期化中にエラーが発生しました。ログを確認してください。")
 
 if st.sidebar.button("本番用DB初期化"):
-    st.sidebar.info("本番用データベースを初期化中...")
-    try:
-        init_db_prod()
-        st.sidebar.success("本番用データベースの初期化が完了しました。")
-    except Exception as e:
-        st.sidebar.error(f"本番用DB初期化中にエラーが発生しました: {e}")
+    # メッセージ表示用のプレースホルダーを作成
+    status_message = st.sidebar.empty()
+    status_message.info("本番用データベースを初期化中...")
+    
+    if init_db_prod():
+        status_message.success("本番用データベースの初期化が完了しました。")
+    else:
+        status_message.error("本番用DB初期化中にエラーが発生しました。ログを確認してください。")
 
 # パターンルール管理セクション
 st.sidebar.subheader("パターンルール管理")
@@ -267,6 +276,25 @@ with st.sidebar.expander("ビジネスロジックルール"):
 with st.sidebar.expander("SAP特殊パターンルール"):
     st.json(st.session_state.corrector._rules_data['sap_patterns'])
 
+# マスタデータ管理セクション
+st.sidebar.subheader("マスタデータ管理")
+if st.sidebar.button("マスタDB初期化"):
+    status_message = st.sidebar.empty()
+    status_message.info("マスタDBを初期化中...")
+    try:
+        master_manager.init_master()
+        status_message.success("マスタDBの初期化が完了しました。")
+    except Exception as e:
+        status_message.error(f"マスタDB初期化中にエラーが発生しました: {e}")
+
+if st.sidebar.button("マスタデータ表示"):
+    try:
+        master_df = master_manager.load_master()
+        st.sidebar.write("### 現在のマスタデータ")
+        st.sidebar.dataframe(master_df)
+    except Exception as e:
+        st.sidebar.error(f"マスタデータの読み込み中にエラーが発生しました: {e}")
+
 # ルール変更を保存するボタン
 if st.sidebar.button("ルール変更を保存"):
     try:
@@ -278,29 +306,101 @@ if st.sidebar.button("ルール変更を保存"):
 # --- メインコンテンツ ---
 st.header("データ処理")
 
+# パターン修正ルールの生成と適用セクション
+st.subheader("パターン修正ルールの生成と適用")
+st.write("データ型修正のためのパターンルールを生成し、適用します。")
+
+col_fixer, col_applier = st.columns(2)
+
+with col_fixer:
+    if st.button("パターン修正ルールを生成"):
+        status_message = st.empty()
+        status_message.info("パターン修正ルールを生成中... (compare_report.csvが必要です)")
+        try:
+            fixer = T002PatternFixer()
+            fixer.run_full_analysis()
+            status_message.success("パターン修正ルールの生成が完了しました。 (pattern_rules.json)")
+        except Exception as e:
+            status_message.error(f"パターン修正ルールの生成中にエラーが発生しました: {e}")
+
+with col_applier:
+    if st.button("生成されたルールを適用"):
+        status_message = st.empty()
+        status_message.info("生成されたルールを適用中... (t002_loader_updates.jsonを生成)")
+        try:
+            applier = T002RuleApplier()
+            applier.run_full_application()
+            status_message.success("ルールの適用が完了しました。 (t002_loader_updates.json)")
+        except Exception as e:
+            status_message.error(f"ルールの適用中にエラーが発生しました: {e}")
+
+st.markdown("---")
+
 # ファイル分析セクション
+
 st.subheader("ファイル分析")
 st.write(f"分析対象データディレクトリ: `{DATA_DIR}`")
 if st.button("ファイル分析実行"):
-    st.info("ファイル分析を実行中...")
+    status_message = st.empty()
+    status_message.info("ファイル分析を実行中...")
     try:
         # analyze_files関数は結果を返すので、それを表示
-        report = analyze_files(DATA_DIR, CANDIDATE_CSV, DB_FILE)
-        st.success("ファイル分析が完了しました。")
+        analysis_df = analyze_files(DATA_DIR, CANDIDATE_CSV, DB_FILE)
+        status_message.success("ファイル分析が完了しました。")
         st.write("### 分析レポート概要")
-        st.json(report) # 仮にJSON形式で表示
+        st.dataframe(analysis_df) # DataFrameとして表示
+        st.session_state.analysis_df = analysis_df # セッションステートに保存
     except Exception as e:
-        st.error(f"ファイル分析中にエラーが発生しました: {e}")
+        status_message.error(f"ファイル分析中にエラーが発生しました: {e}")
 
 # データロードと比較セクション
 st.subheader("データロードと比較")
 if st.button("データロードと比較実行"):
-    st.info("データロードと比較を実行中...")
+    status_message = st.empty()
+    status_message.info("データロードと比較を実行中...")
     try:
         load_and_compare()
-        st.success("データロードと比較が完了しました。")
+        status_message.success("データロードと比較が完了しました。")
     except Exception as e:
-        st.error(f"データロードと比較中にエラーが発生しました: {e}")
+        status_message.error(f"データロードと比較中にエラーが発生しました: {e}")
+
+st.markdown("---")
+
+# データマッピングと型比較セクション
+st.header("データマッピングと型比較")
+
+if st.button("マスタと比較して差分を検出"):
+    status_message = st.empty()
+    if 'analysis_df' in st.session_state and not st.session_state.analysis_df.empty:
+        status_message.info("マスタデータとの比較を実行中...")
+        try:
+            new_cols, type_mismatch = mapper.compare_with_master(st.session_state.analysis_df)
+            status_message.success("マスタデータとの比較が完了しました。")
+            
+            st.write("### マスタ未登録の新しい列")
+            if not new_cols.empty:
+                st.dataframe(new_cols)
+                if st.button("未登録列をマスタに追加"):
+                    try:
+                        master_manager.update_master(new_cols)
+                        st.success("未登録列をマスタに追加しました。")
+                    except Exception as e:
+                        st.error(f"マスタへの追加中にエラーが発生しました: {e}")
+            else:
+                st.info("マスタ未登録の新しい列はありませんでした。")
+            
+            st.write("### データ型不一致の列")
+            if not type_mismatch.empty:
+                st.dataframe(type_mismatch)
+                st.warning("データ型不一致の列があります。必要に応じてマスタを更新してください。")
+            else:
+                st.info("データ型不一致の列はありませんでした。")
+
+        except Exception as e:
+            status_message.error(f"マスタデータとの比較中にエラーが発生しました: {e}")
+    else:
+        status_message.warning("先にファイル分析を実行してください。")
+        st.warning("先にファイル分析を実行してください。")
 
 st.markdown("---")
 st.write("アプリケーションの状態やログはここに表示されます。")
