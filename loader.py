@@ -4,6 +4,8 @@ import sqlite3
 import json
 from pathlib import Path
 from typing import Optional, Tuple, Dict, List
+from sqlalchemy import create_engine, text
+from sqlalchemy.engine import Engine
 from sqlalchemy import types as sql_types
 from config import DATA_DIR, DB_FILE, OUTPUT_DIR, SKIP_EXTENSIONS
 
@@ -107,21 +109,23 @@ class SimpleFileProcessor:
         else:
             return self.process_text(file_path)
 
-def get_table_info(conn: sqlite3.Connection, table_name: str) -> Dict[str, str]:
+def get_table_info(engine: Engine, table_name: str) -> Dict[str, str]:
     """テーブル情報を取得"""
     try:
-        cursor = conn.cursor()
-        cursor.execute(f"PRAGMA table_info({table_name})")
-        return {row[1]: row[2] for row in cursor.fetchall()}
+        with engine.connect() as connection:
+            # PRAGMA文はtext()でラップする必要がある
+            result = connection.execute(text(f"PRAGMA table_info({table_name})"))
+            return {row[1]: row[2] for row in result}
     except Exception: # E722: Do not use bare `except`
         return {}
 
-def get_inferred_info(conn: sqlite3.Connection, file_name: str) -> Dict[str, str]:
+def get_inferred_info(engine: Engine, file_name: str) -> Dict[str, str]:
     """推定情報を取得"""
     try:
-        cursor = conn.cursor()
-        cursor.execute("SELECT column_name, data_type FROM column_master WHERE file_name=?", (file_name,))
-        return {row[0]: row[1] for row in cursor.fetchall()}
+        with engine.connect() as connection:
+            query = text("SELECT column_name, data_type FROM column_master WHERE file_name=:file_name")
+            result = connection.execute(query, {"file_name": file_name})
+            return {row[0]: row[1] for row in result}
     except Exception: # E722: Do not use bare `except`
         return {}
 
@@ -155,12 +159,8 @@ def convert_dataframe_types(df: pd.DataFrame, inferred_schema: Dict[str, str], f
     return df_converted
 
 
-def save_with_types(df: pd.DataFrame, table_name: str, conn: sqlite3.Connection, inferred_schema: Dict[str, str]):
-    """型指定付きでSQLiteテーブルを作成・保存（改良版）"""
-    
-    # テーブル削除
-    conn.execute(f"DROP TABLE IF EXISTS {table_name}")
-    conn.commit()
+def save_with_types(df: pd.DataFrame, table_name: str, engine: Engine, inferred_schema: Dict[str, str]):
+    """型指定付きでSQLiteテーブルを作成・保存（SQLAlchemy Engine使用）"""
     
     # inferred_schemaに基づいて、SQLAlchemyの型マッピング辞書を作成
     dtype_mapping = {}
@@ -190,7 +190,8 @@ def save_with_types(df: pd.DataFrame, table_name: str, conn: sqlite3.Connection,
             pass
     
     # 型を明示的に指定してto_sqlを呼び出す
-    df_safe.to_sql(table_name, conn, if_exists='replace', index=False, dtype=dtype_mapping)
+    # if_exists='replace'が内部でDROP TABLEを実行してくれる
+    df_safe.to_sql(table_name, engine, if_exists='replace', index=False, dtype=dtype_mapping)
 
 def sanitize_table_name(file_name: str) -> str:
     """テーブル名をサニタイズ"""
@@ -226,14 +227,14 @@ def load_and_compare():
     print(f"スキップ: {len(all_files) - len(target_files)}")
     print("-" * 50)
     
-    # データベース接続
+    # SQLAlchemy Engineの作成
     try:
-        conn = sqlite3.connect(DB_FILE)
-        print(f"データベース接続成功: {DB_FILE}")
+        engine = create_engine(f"sqlite:///{DB_FILE}")
+        print(f"データベースエンジン接続成功: {DB_FILE}")
     except Exception as e:
-        print(f"データベース接続失敗: {e}")
+        print(f"データベースエンジン接続失敗: {e}")
         return
-    
+
     processed_count = 0
     error_count = 0
     
@@ -258,27 +259,23 @@ def load_and_compare():
             # SQLiteに保存（型変換付き）
             try:
                 # column_masterから推定型情報を取得
-                inferred_schema = get_inferred_info(conn, file_name)
+                inferred_schema = get_inferred_info(engine, file_name)
                 
                 # DataFrame列の型変換
                 df_typed = convert_dataframe_types(df, inferred_schema, file_name)
                 
                 # SQLiteに保存（型指定付き）
-                save_with_types(df_typed, table_name, conn, inferred_schema)
+                save_with_types(df_typed, table_name, engine, inferred_schema)
                 print(f"SQLite保存完了: {table_name}")
                 
             except Exception as e:
                 print(f"SQLite保存失敗: {e}")
                 error_count += 1
                 continue
-            except Exception as e:
-                print(f"SQLite保存失敗: {e}")
-                error_count += 1
-                continue
             
             # スキーマ比較
-            actual_schema = get_table_info(conn, table_name)
-            inferred_schema = get_inferred_info(conn, file_name)
+            actual_schema = get_table_info(engine, table_name)
+            inferred_schema = get_inferred_info(engine, file_name)
             
             # 結果作成
             for col_name, actual_type in actual_schema.items():
@@ -308,9 +305,6 @@ def load_and_compare():
     
     except KeyboardInterrupt:
         print("\n処理が中断されました")
-    
-    finally:
-        conn.close()
     
     # 結果出力
     print("\n" + "=" * 50)
