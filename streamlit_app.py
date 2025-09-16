@@ -11,8 +11,6 @@ from init_prod import init_db_prod
 from analyzer import analyze_files
 from loader import load_and_compare
 import pattern_rules # パターンルール管理のためにインポート
-from t002_pattern_fixer import T002PatternFixer # 追加
-from t002_rule_applier import T002RuleApplier # 追加
 import master_manager # 追加
 import mapper # 追加
 from t003_rule_integration import RuleIntegrationManager # T003統合機能
@@ -306,52 +304,26 @@ if st.sidebar.button("ルール変更を保存"):
 # --- メインコンテンツ ---
 st.header("データ処理")
 
-# パターン修正ルールの生成と適用セクション
-st.subheader("パターン修正ルールの生成と適用")
-st.write("データ型修正のためのパターンルールを生成し、適用します。")
 
-col_fixer, col_applier = st.columns(2)
-
-with col_fixer:
-    if st.button("パターン修正ルールを生成"):
-        status_message = st.empty()
-        status_message.info("パターン修正ルールを生成中... (compare_report.csvが必要です)")
-        try:
-            fixer = T002PatternFixer()
-            fixer.run_full_analysis()
-            status_message.success("パターン修正ルールの生成が完了しました。 (pattern_rules.json)")
-        except Exception as e:
-            status_message.error(f"パターン修正ルールの生成中にエラーが発生しました: {e}")
-
-with col_applier:
-    if st.button("生成されたルールを適用"):
-        status_message = st.empty()
-        status_message.info("生成されたルールを適用中... (t002_loader_updates.jsonを生成)")
-        try:
-            applier = T002RuleApplier()
-            applier.run_full_application()
-            status_message.success("ルールの適用が完了しました。 (t002_loader_updates.json)")
-        except Exception as e:
-            status_message.error(f"ルールの適用中にエラーが発生しました: {e}")
-
-st.markdown("---")
-
-# ファイル分析セクション
-
-st.subheader("ファイル分析")
+# ルール適用とマスタ更新セクション
+st.subheader("ルール適用とマスタ更新")
+st.write(
+    "サイドバーで編集した最新のパターンルールをすべてのファイルに適用し、データベースの型マスタ情報を更新します。"
+    "この操作は、データロードの前に実行してください。"
+)
 st.write(f"分析対象データディレクトリ: `{DATA_DIR}`")
-if st.button("ファイル分析実行"):
+if st.button("最新ルールを適用してマスタを更新"):
     status_message = st.empty()
-    status_message.info("ファイル分析を実行中...")
+    status_message.info("ルールを適用し、マスタを更新中...")
     try:
-        # analyze_files関数は結果を返すので、それを表示
+        # analyze_filesはルールを適用し、マスタDBを更新し、結果を返す
         analysis_df = analyze_files(DATA_DIR, CANDIDATE_CSV, DB_FILE)
-        status_message.success("ファイル分析が完了しました。")
-        st.write("### 分析レポート概要")
+        status_message.success("型マスタの更新が完了しました。")
+        st.write("### 分析・更新結果レポート")
         st.dataframe(analysis_df) # DataFrameとして表示
         st.session_state.analysis_df = analysis_df # セッションステートに保存
     except Exception as e:
-        status_message.error(f"ファイル分析中にエラーが発生しました: {e}")
+        status_message.error(f"マスタの更新中にエラーが発生しました: {e}")
 
 # データロードと比較セクション
 st.subheader("データロードと比較")
