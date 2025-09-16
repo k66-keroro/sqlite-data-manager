@@ -4,6 +4,7 @@ import sqlite3
 import json
 from pathlib import Path
 from typing import Optional, Tuple, Dict, List
+from sqlalchemy import types as sql_types
 from config import DATA_DIR, DB_FILE, OUTPUT_DIR, SKIP_EXTENSIONS
 
 def detect_delimiter_simple(file_path: str, encoding: str) -> str:
@@ -155,12 +156,26 @@ def convert_dataframe_types(df: pd.DataFrame, inferred_schema: Dict[str, str], f
 
 
 def save_with_types(df: pd.DataFrame, table_name: str, conn: sqlite3.Connection, inferred_schema: Dict[str, str]):
-    """型指定付きでSQLiteテーブルを作成・保存（簡単版）"""
+    """型指定付きでSQLiteテーブルを作成・保存（改良版）"""
     
     # テーブル削除
     conn.execute(f"DROP TABLE IF EXISTS {table_name}")
     conn.commit()
     
+    # inferred_schemaに基づいて、SQLAlchemyの型マッピング辞書を作成
+    dtype_mapping = {}
+    for col_name, col_type in inferred_schema.items():
+        if col_name not in df.columns:
+            continue
+        if col_type == "INTEGER":
+            dtype_mapping[col_name] = sql_types.Integer
+        elif col_type == "REAL":
+            dtype_mapping[col_name] = sql_types.Float
+        elif col_type == "DATETIME":
+            dtype_mapping[col_name] = sql_types.DateTime
+        else:
+            dtype_mapping[col_name] = sql_types.Text
+
     # データ挿入前の安全化
     df_safe = df.copy()
     
@@ -174,8 +189,8 @@ def save_with_types(df: pd.DataFrame, table_name: str, conn: sqlite3.Connection,
             # 変換エラーの場合はそのまま
             pass
     
-    # 単純にto_sqlを使用（型変換はDataFrame側で完了済み）
-    df_safe.to_sql(table_name, conn, if_exists='replace', index=False)
+    # 型を明示的に指定してto_sqlを呼び出す
+    df_safe.to_sql(table_name, conn, if_exists='replace', index=False, dtype=dtype_mapping)
 
 def sanitize_table_name(file_name: str) -> str:
     """テーブル名をサニタイズ"""

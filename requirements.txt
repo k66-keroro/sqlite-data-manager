@@ -1,6 +1,7 @@
 # Core dependencies for data processing
 pandas>=1.5.0
 numpy>=1.21.0
+SQLAlchemy>=1.4.0      # Required for explicit type mapping in pandas.to_sql
 openpyxl>=3.0.9        # Excel file support
 xlsxwriter>=3.0.0      # Excel writing
 chardet>=5.0.0         # Character encoding detection
