@@ -9,7 +9,7 @@ from config import DATA_DIR, CANDIDATE_CSV, DB_FILE
 from init_dev import init_db_dev
 from init_prod import init_db_prod
 from analyzer import analyze_files
-from loader import load_and_compare
+from loader import load_data
 import pattern_rules # パターンルール管理のためにインポート
 import master_manager # 追加
 import mapper # 追加
@@ -340,11 +340,11 @@ if st.sidebar.button("ルール変更を保存"):
 st.header("データ処理")
 
 
-# ルール適用とマスタ更新セクション
-st.subheader("ルール適用とマスタ更新")
+# ステップ1: スキーマ分析とマスタ更新
+st.subheader("ステップ1: スキーマ分析とマスタ更新")
 st.write(
-    "サイドバーで編集した最新のパターンルールをすべてのファイルに適用し、データベースの型マスタ情報を更新します。"
-    "この操作は、データロードの前に実行してください。"
+    "サイドバーで編集した最新のパターンルールをすべてのファイルに適用し、データベースの型定義マスタ（`column_master`）を更新します。"
+    "この操作は、データをロードする前に必ず実行してください。"
 )
 st.write(f"分析対象データディレクトリ: `{DATA_DIR}`")
 if st.button("最新ルールを適用してマスタを更新"):
@@ -360,16 +360,17 @@ if st.button("最新ルールを適用してマスタを更新"):
     except Exception as e:
         status_message.error(f"マスタの更新中にエラーが発生しました: {e}")
 
-# データロードと比較セクション
-st.subheader("データロードと比較")
-if st.button("データロードと比較実行"):
+# ステップ2: データをテーブルにロード
+st.subheader("ステップ2: データをテーブルにロード")
+st.write("分析・定義されたスキーマ（`column_master`）に基づき、ファイルを読み込んでデータベースにテーブルを作成します。")
+if st.button("データをテーブルにロード"):
     status_message = st.empty()
-    status_message.info("データロードと比較を実行中...")
+    status_message.info("データロードを実行中...")
     try:
-        load_and_compare()
-        status_message.success("データロードと比較が完了しました。")
+        load_data()
+        status_message.success("データロードが完了しました。")
     except Exception as e:
-        status_message.error(f"データロードと比較中にエラーが発生しました: {e}")
+        status_message.error(f"データロード中にエラーが発生しました: {e}")
 
 st.markdown("---")
 

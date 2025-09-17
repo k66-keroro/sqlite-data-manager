@@ -10,8 +10,8 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 # SQLite DBファイル
 DB_FILE = os.path.join(OUTPUT_DIR, "master.db")
 
-# 列候補CSV
-CANDIDATE_CSV = os.path.join(OUTPUT_DIR, "column_mapping_candidates.csv")
+# 分析レポートCSV
+CANDIDATE_CSV = os.path.join(OUTPUT_DIR, "analysis_report.csv")
 
 # 除外拡張子
 SKIP_EXTENSIONS = [".py", ".log", ".bak", ".db"]

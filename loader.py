@@ -160,38 +160,46 @@ def convert_dataframe_types(df: pd.DataFrame, inferred_schema: Dict[str, str], f
 
 
 def save_with_types(df: pd.DataFrame, table_name: str, engine: Engine, inferred_schema: Dict[str, str]):
-    """型指定付きでSQLiteテーブルを作成・保存（SQLAlchemy Engine使用）"""
+    """
+    スキーマを手動で作成し、データを追加する方式に修正。
+    pandas.to_sqlのスキーマ推論に関する問題を完全に回避する。
+    """
+    # 1. スキーマ定義からCREATE TABLE文を動的に生成
+    column_defs = []
+    for col_name in df.columns:
+        # column_masterに定義されている型を取得、なければTEXTをフォールバック
+        sql_type = inferred_schema.get(col_name, "TEXT").upper()
+        # SQLiteが理解できる型名に正規化
+        if sql_type not in ["TEXT", "INTEGER", "REAL", "DATETIME"]:
+            sql_type = "TEXT"
+        column_defs.append(f'"{col_name}" {sql_type}')
     
-    # inferred_schemaに基づいて、SQLAlchemyの型マッピング辞書を作成
-    dtype_mapping = {}
-    for col_name, col_type in inferred_schema.items():
-        if col_name not in df.columns:
-            continue
-        if col_type == "INTEGER":
-            dtype_mapping[col_name] = sql_types.Integer
-        elif col_type == "REAL":
-            dtype_mapping[col_name] = sql_types.Float
-        elif col_type == "DATETIME":
-            dtype_mapping[col_name] = sql_types.DateTime
-        else:
-            dtype_mapping[col_name] = sql_types.Text
+    create_table_sql = f'CREATE TABLE "{table_name}" ({", ".join(column_defs)});'
 
+    # 2. テーブルを再作成
+    with engine.connect() as connection:
+        # トランザクションを開始
+        with connection.begin() as transaction:
+            try:
+                connection.execute(text(f'DROP TABLE IF EXISTS "{table_name}"'))
+                connection.execute(text(create_table_sql))
+            except Exception as e:
+                transaction.rollback()
+                raise e
+
+    # 3. データをテーブルに追加（スキーマは作成済みなので'append'）
     # データ挿入前の安全化
     df_safe = df.copy()
-    
-    # すべてのNaN、NaT、pd.NAをNoneに置換
     for col in df_safe.columns:
-        # pandas 特殊値をすべてNoneに統一
         try:
+            # pandasの特殊なNA/NaT値をPythonネイティブのNoneに変換
+            # これにより、データベースドライバが正しくNULLとして解釈できる
             mask = pd.isna(df_safe[col])
             df_safe[col] = df_safe[col].where(~mask, None)
-        except Exception: # E722: Do not use bare `except`
-            # 変換エラーの場合はそのまま
+        except Exception:
             pass
-    
-    # 型を明示的に指定してto_sqlを呼び出す
-    # if_exists='replace'が内部でDROP TABLEを実行してくれる
-    df_safe.to_sql(table_name, engine, if_exists='replace', index=False, dtype=dtype_mapping)
+
+    df_safe.to_sql(table_name, engine, if_exists='append', index=False)
 
 def sanitize_table_name(file_name: str) -> str:
     """テーブル名をサニタイズ"""
@@ -203,13 +211,12 @@ def sanitize_table_name(file_name: str) -> str:
         sanitized = 'table_' + sanitized
     return sanitized or 'unnamed_table'
 
-def load_and_compare():
-    """メイン処理"""
-    print("=== SQLite GUI Manager - Load & Compare ===")
+def load_data():
+    """メイン処理：定義されたスキーマに基づき、データをロードする"""
+    print("=== SQLite GUI Manager - Data Loading ===")
     
     # 初期化
     processor = SimpleFileProcessor()
-    results = []
     
     # ディレクトリ確認
     if not os.path.exists(DATA_DIR):
@@ -273,35 +280,8 @@ def load_and_compare():
                 error_count += 1
                 continue
             
-            # スキーマ比較
-            actual_schema = get_table_info(engine, table_name)
-            inferred_schema = get_inferred_info(engine, file_name)
-            
-            # 結果作成
-            for col_name, actual_type in actual_schema.items():
-                inferred_type = inferred_schema.get(col_name, "（未登録）")
-
-                # 比較ロジックを修正: DATETIMEとTIMESTAMPを一致とみなす
-                actual_upper = actual_type.upper()
-                inferred_upper = inferred_type.upper()
-
-                if inferred_upper == "DATETIME" and actual_upper == "TIMESTAMP":
-                    match = True
-                else:
-                    match = (actual_upper == inferred_upper) if inferred_type != "（未登録）" else False
-                
-                results.append({
-                    "File": file_name,
-                    "Column": col_name,
-                    "Inferred_Type": inferred_type,
-                    "Actual_Type": actual_type,
-                    "Match": "○" if match else "×",
-                    "Encoding": encoding_used,
-                    "Delimiter": delimiter_used
-                })
-            
             processed_count += 1
-            print(f"完了: {file_name} (列数: {len(actual_schema)})")
+            print(f"完了: {file_name}")
     
     except KeyboardInterrupt:
         print("\n処理が中断されました")
@@ -311,17 +291,8 @@ def load_and_compare():
     print("処理結果:")
     print(f"  成功: {processed_count} ファイル")
     print(f"  失敗: {error_count} ファイル")
-    print(f"  総行数: {len(results)} 行")
-    
-    if results:
-        report_path = os.path.join(OUTPUT_DIR, "compare_report.csv")
-        try:
-            pd.DataFrame(results).to_csv(report_path, index=False, encoding="utf-8-sig")
-            print(f"\n 比較結果を出力しました → {report_path}")
-        except Exception as e:
-            print(f" CSV出力失敗: {e}")
-    else:
-        print(" 処理可能なファイルがありませんでした")
+    print("=" * 50)
+
 
 if __name__ == "__main__":
-    load_and_compare()
+    load_data()
