@@ -145,11 +145,48 @@ def convert_dataframe_types(df: pd.DataFrame, inferred_schema: Dict[str, str], f
                 # 実数変換（エラー値はNoneに）
                 df_converted[col_name] = pd.to_numeric(df_converted[col_name], errors='coerce').astype('float64')
             elif inferred_type == "DATETIME":
-                # 日付変換。エラーはNaT(Not a Time)となり、to_sqlによってNULLとして扱われる
+                # 日付変換。複数フォーマットを試行して安全に変換
                 try:
-                    df_converted[col_name] = pd.to_datetime(df_converted[col_name], errors='coerce')
-                except Exception: # E722: Do not use bare `except`
-                    # 変換に失敗した場合は、列をそのままにしておく（おそらくTEXT型）
+                    # まず元の値をそのまま保持
+                    original_values = df_converted[col_name].copy()
+                    
+                    # 複数の日付フォーマットを試行
+                    date_formats = [
+                        None,  # pandasの自動推論を最初に試す
+                        '%Y%m%d',
+                        '%Y/%m/%d',
+                        '%Y-%m-%d',
+                        '%d.%m.%Y',
+                        '%m/%d/%Y',
+                        '%Y.%m.%d'
+                    ]
+                    
+                    converted = None
+                    for fmt in date_formats:
+                        try:
+                            if fmt is None:
+                                # 自動推論を試す
+                                converted = pd.to_datetime(original_values, errors='coerce')
+                            else:
+                                # 特定フォーマットを試す
+                                converted = pd.to_datetime(original_values, format=fmt, errors='coerce')
+                            
+                            # 変換成功率をチェック（50%以上成功なら採用）
+                            success_rate = (converted.notna().sum() / len(converted))
+                            if success_rate >= 0.5:
+                                df_converted[col_name] = converted
+                                print(f"日付変換成功: {col_name} (フォーマット: {fmt or 'auto'}, 成功率: {success_rate:.1%})")
+                                break
+                        except Exception:
+                            continue
+                    else:
+                        # すべての変換が失敗した場合は元の値を保持（TEXT扱い）
+                        print(f"日付変換失敗: {col_name} - 元の値を保持")
+                        df_converted[col_name] = original_values
+                        
+                except Exception as e:
+                    print(f"日付変換エラー: {col_name} - {e}")
+                    # 変換に失敗した場合は、列をそのままにしておく
                     pass
             # TEXTはそのまま（文字列）
         except Exception: # E722: Do not use bare `except`

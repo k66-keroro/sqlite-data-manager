@@ -9,11 +9,11 @@
       "separator": "\t"
     },
     "zs65.txt": {
-      "encoding": "utf-8",
+      "encoding": "cp932",
       "separator": "\t"
     },
     "zs65_sss.txt": {
-      "encoding": "utf-8",
+      "encoding": "cp932",
       "separator": "\t"
     }
   },
@@ -36,7 +36,6 @@
   ],
   "business_logic_rules": {
     "code_fields": [
-      "保管場所",
       "warehouse",
       "storage",
       "location",
@@ -55,7 +54,8 @@
       "company",
       "comp",
       "shop",
-      "zzz"
+      "zzz",
+      "保管場所"
     ],
     "amount_fields": [
       "原価",
@@ -89,7 +89,25 @@
       "重量",
       "juuryou",
       "weight",
-      "wt"
+      "wt",
+      "在庫",
+      "zaiko",
+      "stock",
+      "inventory",
+      "利用可能",
+      "available",
+      "評価",
+      "hyouka",
+      "value",
+      "制限",
+      "seigen",
+      "limit",
+      "保留",
+      "horyuu",
+      "hold",
+      "返品",
+      "henpin",
+      "return"
     ]
   },
   "sap_patterns": {
