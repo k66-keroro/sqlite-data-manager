@@ -1,0 +1,95 @@
+{
+  "gui_interface": {
+    "rule_creation_form": {
+      "fields": [
+        {
+          "name": "rule_name",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "description",
+          "type": "textarea",
+          "required": true
+        },
+        {
+          "name": "pattern",
+          "type": "text",
+          "required": true,
+          "validation": "regex"
+        },
+        {
+          "name": "target_type",
+          "type": "select",
+          "options": [
+            "TEXT",
+            "INTEGER",
+            "REAL",
+            "DATETIME"
+          ]
+        },
+        {
+          "name": "action",
+          "type": "select",
+          "options": [
+            "type_change",
+            "zero_padding_remove",
+            "trailing_minus_fix",
+            "date_format_fix",
+            "decimal_comma_fix"
+          ]
+        },
+        {
+          "name": "confidence_threshold",
+          "type": "number",
+          "min": 0.0,
+          "max": 1.0,
+          "default": 0.7
+        },
+        {
+          "name": "field_patterns",
+          "type": "text",
+          "multiple": true,
+          "description": "適用対象フィールド名パターン"
+        }
+      ]
+    },
+    "rule_testing": {
+      "test_data_input": "textarea",
+      "pattern_validation": "real_time",
+      "match_preview": "table"
+    },
+    "rule_management": {
+      "rule_list": "table_with_actions",
+      "enable_disable": "toggle",
+      "edit_rule": "modal_form",
+      "delete_rule": "confirmation_dialog"
+    }
+  },
+  "auto_application": {
+    "trigger_events": [
+      "new_rule_created",
+      "rule_enabled",
+      "data_import_completed",
+      "manual_scan_requested"
+    ],
+    "processing_pipeline": [
+      "scan_database_for_matching_fields",
+      "apply_pattern_matching",
+      "calculate_confidence_scores",
+      "create_modification_suggestions",
+      "present_to_user_for_approval"
+    ],
+    "approval_workflow": {
+      "auto_apply_threshold": 0.9,
+      "require_approval_threshold": 0.7,
+      "reject_threshold": 0.5
+    }
+  },
+  "integration_points": {
+    "pattern_rules_data.json": "rule_storage",
+    "column_master": "field_metadata",
+    "modification_engine": "rule_execution",
+    "backup_system": "safety_net"
+  }
+}

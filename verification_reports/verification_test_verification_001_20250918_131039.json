@@ -1,0 +1,77 @@
+{
+  "batch_id": "test_verification_001",
+  "verification_time": "2025-09-18T13:10:39.991194",
+  "overall_status": "failed",
+  "integrity_checks": [
+    {
+      "check_name": "table_existence",
+      "passed": false,
+      "message": "不足テーブル: test_file",
+      "details": {
+        "missing_tables": [
+          "test_file"
+        ]
+      },
+      "severity": "error"
+    },
+    {
+      "check_name": "column_type_consistency",
+      "passed": false,
+      "message": "型不整合: 1件",
+      "details": {
+        "inconsistencies": [
+          {
+            "table": "test_file",
+            "column": "test_field1",
+            "error": "カラムが存在しません"
+          }
+        ]
+      },
+      "severity": "warning"
+    },
+    {
+      "check_name": "data_value_validity",
+      "passed": true,
+      "message": "データ値は妥当です",
+      "details": {},
+      "severity": "info"
+    },
+    {
+      "check_name": "foreign_key_integrity",
+      "passed": true,
+      "message": "外部キー制約は正常です",
+      "details": {},
+      "severity": "info"
+    },
+    {
+      "check_name": "null_constraints",
+      "passed": false,
+      "message": "NULL値が多いフィールド: 1件",
+      "details": {
+        "null_violations": [
+          {
+            "table": "test_file",
+            "column": "test_field1",
+            "error": "no such table: test_file"
+          }
+        ]
+      },
+      "severity": "warning"
+    }
+  ],
+  "anomalies": [
+    {
+      "type": "detection_error",
+      "table": "test_file",
+      "column": "test_field1",
+      "error": "no such table: test_file"
+    }
+  ],
+  "performance_metrics": {
+    "database_size_bytes": 14381056,
+    "database_size_mb": 13.71,
+    "table_count": 40,
+    "index_count": 1,
+    "modifications_count": 1
+  }
+}

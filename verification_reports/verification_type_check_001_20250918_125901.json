@@ -1,0 +1,212 @@
+{
+  "batch_id": "type_check_001",
+  "verification_time": "2025-09-18T12:59:01.475430",
+  "overall_status": "warning",
+  "integrity_checks": [
+    {
+      "check_name": "table_existence",
+      "passed": true,
+      "message": "すべてのテーブルが存在します",
+      "details": {
+        "checked_tables": [
+          "KOUSU_JISSEKI",
+          "GetSekkeiWBSJisseki",
+          "KANSEI_JISSEKI"
+        ]
+      },
+      "severity": "info"
+    },
+    {
+      "check_name": "column_type_consistency",
+      "passed": true,
+      "message": "カラム型は整合しています",
+      "details": {},
+      "severity": "info"
+    },
+    {
+      "check_name": "data_value_validity",
+      "passed": false,
+      "message": "無効な値: 2件",
+      "details": {
+        "invalid_values": [
+          {
+            "table": "GetSekkeiWBSJisseki",
+            "column": "STA_DT_KN",
+            "type": "DATETIME",
+            "invalid_count": 686
+          },
+          {
+            "table": "GetSekkeiWBSJisseki",
+            "column": "STA_DT_KZ",
+            "type": "DATETIME",
+            "invalid_count": 569
+          }
+        ]
+      },
+      "severity": "warning"
+    },
+    {
+      "check_name": "foreign_key_integrity",
+      "passed": true,
+      "message": "外部キー制約は正常です",
+      "details": {},
+      "severity": "info"
+    },
+    {
+      "check_name": "null_constraints",
+      "passed": false,
+      "message": "NULL値が多いフィールド: 1件",
+      "details": {
+        "null_violations": [
+          {
+            "table": "KOUSU_JISSEKI",
+            "column": "作業/活動番号",
+            "error": "no such column: 作業"
+          }
+        ]
+      },
+      "severity": "warning"
+    }
+  ],
+  "anomalies": [
+    {
+      "type": "statistical_outlier",
+      "table": "GetSekkeiWBSJisseki",
+      "column": "SALE_NUM",
+      "outlier_count": 19,
+      "total_values": 1000,
+      "sample_outliers": [
+        40.0,
+        20.0,
+        20.0,
+        30.0,
+        40.0
+      ]
+    },
+    {
+      "type": "statistical_outlier",
+      "table": "GetSekkeiWBSJisseki",
+      "column": "PRD_AMOUNT",
+      "outlier_count": 16,
+      "total_values": 1000,
+      "sample_outliers": [
+        50000000.0,
+        133300000.0,
+        35000000.0,
+        128300000.0,
+        33240000.0
+      ]
+    },
+    {
+      "type": "statistical_outlier",
+      "table": "GetSekkeiWBSJisseki",
+      "column": "matCost_de",
+      "outlier_count": 11,
+      "total_values": 1000,
+      "sample_outliers": [
+        52498828.0,
+        69334339.0,
+        29333577.0,
+        33958557.0,
+        30572133.0
+      ]
+    },
+    {
+      "type": "statistical_outlier",
+      "table": "GetSekkeiWBSJisseki",
+      "column": "CURR_RATE",
+      "outlier_count": 48,
+      "total_values": 1000,
+      "sample_outliers": [
+        78.0,
+        78.0,
+        78.0,
+        78.0,
+        78.0
+      ]
+    },
+    {
+      "type": "statistical_outlier",
+      "table": "GetSekkeiWBSJisseki",
+      "column": "totalCost_de",
+      "outlier_count": 12,
+      "total_values": 1000,
+      "sample_outliers": [
+        76890135.386,
+        107207349.82,
+        163306422.337,
+        46175939.514,
+        55279353.7
+      ]
+    },
+    {
+      "type": "statistical_outlier",
+      "table": "KANSEI_JISSEKI",
+      "column": "指図数量",
+      "outlier_count": 2,
+      "total_values": 141,
+      "sample_outliers": [
+        108.0,
+        200.0
+      ]
+    },
+    {
+      "type": "statistical_outlier",
+      "table": "KANSEI_JISSEKI",
+      "column": "実績数量",
+      "outlier_count": 3,
+      "total_values": 141,
+      "sample_outliers": [
+        108.0,
+        100.0,
+        200.0
+      ]
+    },
+    {
+      "type": "statistical_outlier",
+      "table": "KANSEI_JISSEKI",
+      "column": "累計数量",
+      "outlier_count": 5,
+      "total_values": 141,
+      "sample_outliers": [
+        100.0,
+        108.0,
+        100.0,
+        100.0,
+        200.0
+      ]
+    },
+    {
+      "type": "statistical_outlier",
+      "table": "KANSEI_JISSEKI",
+      "column": "残数量",
+      "outlier_count": 2,
+      "total_values": 141,
+      "sample_outliers": [
+        58.0,
+        40.0
+      ]
+    },
+    {
+      "type": "unusual_length",
+      "table": "KANSEI_JISSEKI",
+      "column": "WBS要素",
+      "unusual_count": 10,
+      "avg_length": 0.851063829787234,
+      "max_length": 12
+    },
+    {
+      "type": "detection_error",
+      "table": "KOUSU_JISSEKI",
+      "column": "作業/活動番号",
+      "error": "no such column: 作業"
+    }
+  ],
+  "performance_metrics": {
+    "database_size_bytes": 14381056,
+    "database_size_mb": 13.71,
+    "table_count": 40,
+    "index_count": 1,
+    "modifications_count": 50
+  }
+}

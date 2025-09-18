@@ -1,0 +1,22 @@
+[
+  {
+    "backup_id": "backup_20250918_131039",
+    "original_db_path": "C:\\Users\\sem3171\\AppData\\Local\\Temp\\sqlite_manager_test_y0b4phld\\test_master.db",
+    "backup_path": "backups\\backup_test_engine_001_20250918_131039.db",
+    "batch_id": "test_engine_001",
+    "created_at": "2025-09-18T13:10:39.443027",
+    "size_bytes": 14381056,
+    "checksum": "43460f9573cdb4840309f226c4b3e17a6f59b74d4d037463a9ae2a1d08328097",
+    "description": "Batch execution backup: エンジンテスト"
+  },
+  {
+    "backup_id": "backup_20250918_131041",
+    "original_db_path": "C:\\Users\\sem3171\\AppData\\Local\\Temp\\sqlite_manager_test_y0b4phld\\test_master.db",
+    "backup_path": "backups\\backup_template_numeric_conversion_20250918_131041_20250918_131041.db",
+    "batch_id": "template_numeric_conversion_20250918_131041",
+    "created_at": "2025-09-18T13:10:41.631705",
+    "size_bytes": 14381056,
+    "checksum": "43460f9573cdb4840309f226c4b3e17a6f59b74d4d037463a9ae2a1d08328097",
+    "description": "Batch execution backup: テンプレート適用: numeric_conversion"
+  }
+]

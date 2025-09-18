@@ -1,0 +1,11 @@
+[
+  {
+    "batch_id": "test_engine_001",
+    "batch_name": "エンジンテスト",
+    "executed_at": "2025-09-18T13:10:39.460688",
+    "executed_modifications": 0,
+    "failed_modifications": 1,
+    "status": "partial_success",
+    "backup_path": "backups\\backup_test_engine_001_20250918_131039.db"
+  }
+]

@@ -1,0 +1,183 @@
+{
+  "sap_data_cleaning": {
+    "name": "SAPデータクリーニング",
+    "description": "SAP特有のデータ形式を標準形式に変換",
+    "rules": [
+      {
+        "rule_id": "sap_zero_padding",
+        "name": "SAP 0パディング除去",
+        "description": "SAPの伝票番号等の先頭0を除去",
+        "pattern": "^0{2,}(\\d+)$",
+        "action": "zero_padding_remove",
+        "target_type": "TEXT",
+        "confidence_threshold": 0.9,
+        "field_patterns": [
+          ".*伝票番号.*",
+          ".*明細番号.*",
+          ".*コード.*"
+        ]
+      },
+      {
+        "rule_id": "sap_trailing_minus",
+        "name": "SAP 後ろマイナス修正",
+        "description": "SAP会計データの末尾マイナスを先頭に移動",
+        "pattern": "^(\\d+\\.?\\d*)-$",
+        "action": "trailing_minus_fix",
+        "target_type": "REAL",
+        "confidence_threshold": 0.95,
+        "field_patterns": [
+          ".*金額.*",
+          ".*原価.*",
+          ".*単価.*"
+        ]
+      },
+      {
+        "rule_id": "sap_decimal_comma",
+        "name": "SAP 小数点カンマ修正",
+        "description": "ヨーロッパ式小数点表記を標準形式に変換",
+        "pattern": "^(\\d+),(\\d+)$",
+        "action": "decimal_comma_fix",
+        "target_type": "REAL",
+        "confidence_threshold": 0.85,
+        "field_patterns": [
+          ".*単価.*",
+          ".*レート.*",
+          ".*係数.*"
+        ]
+      }
+    ]
+  },
+  "date_normalization": {
+    "name": "日付正規化",
+    "description": "様々な日付形式をDATETIME型に統一",
+    "rules": [
+      {
+        "rule_id": "date_yyyymmdd",
+        "name": "YYYYMMDD形式",
+        "description": "8桁数値日付をDATETIME型に変換",
+        "pattern": "^(19|20)\\d{6}$",
+        "action": "date_format_fix",
+        "target_type": "DATETIME",
+        "confidence_threshold": 0.9,
+        "field_patterns": [
+          ".*日付.*",
+          ".*日.*",
+          ".*DATE.*"
+        ]
+      },
+      {
+        "rule_id": "date_yyyy_mm_dd",
+        "name": "YYYY/MM/DD形式",
+        "description": "スラッシュ区切り日付をDATETIME型に変換",
+        "pattern": "^(19|20)\\d{2}/(0[1-9]|1[0-2])/(0[1-9]|[12]\\d|3[01])$",
+        "action": "date_format_fix",
+        "target_type": "DATETIME",
+        "confidence_threshold": 0.95,
+        "field_patterns": [
+          ".*日付.*",
+          ".*日.*",
+          ".*DATE.*"
+        ]
+      },
+      {
+        "rule_id": "date_dd_mm_yyyy",
+        "name": "DD.MM.YYYY形式",
+        "description": "ドット区切り日付をDATETIME型に変換",
+        "pattern": "^(0[1-9]|[12]\\d|3[01])\\.(0[1-9]|1[0-2])\\.(19|20)\\d{2}$",
+        "action": "date_format_fix",
+        "target_type": "DATETIME",
+        "confidence_threshold": 0.9,
+        "field_patterns": [
+          ".*日付.*",
+          ".*日.*",
+          ".*DATE.*"
+        ]
+      }
+    ]
+  },
+  "numeric_conversion": {
+    "name": "数値変換",
+    "description": "テキスト形式の数値を適切な数値型に変換",
+    "rules": [
+      {
+        "rule_id": "pure_integer",
+        "name": "純粋な整数",
+        "description": "整数のみのテキストをINTEGER型に変換",
+        "pattern": "^-?\\d+$",
+        "action": "type_change",
+        "target_type": "INTEGER",
+        "confidence_threshold": 0.95,
+        "field_patterns": [
+          ".*数量.*",
+          ".*個数.*",
+          ".*件数.*",
+          ".*COUNT.*"
+        ]
+      },
+      {
+        "rule_id": "decimal_number",
+        "name": "小数点数値",
+        "description": "小数点を含む数値をREAL型に変換",
+        "pattern": "^-?\\d+\\.\\d+$",
+        "action": "type_change",
+        "target_type": "REAL",
+        "confidence_threshold": 0.9,
+        "field_patterns": [
+          ".*金額.*",
+          ".*単価.*",
+          ".*重量.*",
+          ".*AMOUNT.*"
+        ]
+      },
+      {
+        "rule_id": "percentage",
+        "name": "パーセンテージ",
+        "description": "%記号付き数値をREAL型に変換",
+        "pattern": "^(\\d+\\.?\\d*)%$",
+        "action": "type_change",
+        "target_type": "REAL",
+        "confidence_threshold": 0.8,
+        "field_patterns": [
+          ".*率.*",
+          ".*パーセント.*",
+          ".*RATE.*"
+        ]
+      }
+    ]
+  },
+  "code_field_handling": {
+    "name": "コードフィールド処理",
+    "description": "コード系フィールドの適切な型設定",
+    "rules": [
+      {
+        "rule_id": "keep_leading_zeros",
+        "name": "先頭0保持",
+        "description": "コード系フィールドは先頭0を保持してTEXT型に",
+        "pattern": "^0\\d+$",
+        "action": "type_change",
+        "target_type": "TEXT",
+        "confidence_threshold": 0.8,
+        "field_patterns": [
+          ".*コード.*",
+          ".*番号.*",
+          ".*ID.*",
+          ".*CODE.*"
+        ]
+      },
+      {
+        "rule_id": "alphanumeric_code",
+        "name": "英数字コード",
+        "description": "英数字混在コードをTEXT型に設定",
+        "pattern": "^[A-Za-z0-9]+$",
+        "action": "type_change",
+        "target_type": "TEXT",
+        "confidence_threshold": 0.9,
+        "field_patterns": [
+          ".*コード.*",
+          ".*ID.*",
+          ".*CODE.*"
+        ]
+      }
+    ]
+  }
+}
