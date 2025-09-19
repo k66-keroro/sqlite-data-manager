@@ -7,5 +7,14 @@
     "failed_modifications": 1,
     "status": "partial_success",
     "backup_path": "backups\\backup_test_engine_001_20250918_131039.db"
+  },
+  {
+    "batch_id": "gui_zs65_fix",
+    "batch_name": "zs65数値型修正",
+    "executed_at": "2025-09-18T14:34:25.307025",
+    "executed_modifications": 1,
+    "failed_modifications": 0,
+    "status": "completed",
+    "backup_path": "backups\\backup_gui_zs65_fix_20250918_143425.db"
   }
 ]

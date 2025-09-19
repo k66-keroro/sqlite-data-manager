@@ -1,0 +1,52 @@
+{
+  "batch_id": "gui_verification",
+  "verification_time": "2025-09-18T14:34:49.236816",
+  "overall_status": "passed",
+  "integrity_checks": [
+    {
+      "check_name": "table_existence",
+      "passed": true,
+      "message": "すべてのテーブルが存在します",
+      "details": {
+        "checked_tables": []
+      },
+      "severity": "info"
+    },
+    {
+      "check_name": "column_type_consistency",
+      "passed": true,
+      "message": "カラム型は整合しています",
+      "details": {},
+      "severity": "info"
+    },
+    {
+      "check_name": "data_value_validity",
+      "passed": true,
+      "message": "データ値は妥当です",
+      "details": {},
+      "severity": "info"
+    },
+    {
+      "check_name": "foreign_key_integrity",
+      "passed": true,
+      "message": "外部キー制約は正常です",
+      "details": {},
+      "severity": "info"
+    },
+    {
+      "check_name": "null_constraints",
+      "passed": true,
+      "message": "NULL値制約は正常です",
+      "details": {},
+      "severity": "info"
+    }
+  ],
+  "anomalies": [],
+  "performance_metrics": {
+    "database_size_bytes": 14381056,
+    "database_size_mb": 13.71,
+    "table_count": 40,
+    "index_count": 1,
+    "modifications_count": 0
+  }
+}

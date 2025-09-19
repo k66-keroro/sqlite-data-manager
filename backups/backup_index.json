@@ -18,5 +18,15 @@
     "size_bytes": 14381056,
     "checksum": "43460f9573cdb4840309f226c4b3e17a6f59b74d4d037463a9ae2a1d08328097",
     "description": "Batch execution backup: テンプレート適用: numeric_conversion"
+  },
+  {
+    "backup_id": "backup_20250918_143425",
+    "original_db_path": "C:\\Projects_workspace\\test\\sqlite-data-manager\\output\\master.db",
+    "backup_path": "backups\\backup_gui_zs65_fix_20250918_143425.db",
+    "batch_id": "gui_zs65_fix",
+    "created_at": "2025-09-18T14:34:25.274115",
+    "size_bytes": 14381056,
+    "checksum": "ff98e59aa7be4c090ccdd41fb7e02b4fbf31a74dd327c4a3aeb69dbb8200a91a",
+    "description": "Batch execution backup: zs65数値型修正"
   }
 ]
